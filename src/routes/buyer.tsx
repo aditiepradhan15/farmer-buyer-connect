@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase, type Buyer, type Listing } from "@/lib/supabase";
+import { supabase, type Buyer, type Listing, type Order } from "@/lib/supabase";
 
 export const Route = createFileRoute("/buyer")({
   head: () => ({ meta: [{ title: "Buyer — AgriConnect" }] }),
@@ -68,23 +68,55 @@ type ListingWithFarmer = Listing & {
   farmers: { name: string; village: string; trust_score: number } | null;
 };
 
+type BuyerOrder = Order & {
+  listings: { crop_type: string } | null;
+  farmers: { name: string } | null;
+};
+
+function statusClass(status: string) {
+  switch (status) {
+    case "placed":
+      return "bg-yellow-100 text-yellow-900";
+    case "confirmed":
+      return "bg-blue-100 text-blue-900";
+    case "delivered":
+      return "bg-green-100 text-green-900";
+    case "cancelled":
+      return "bg-red-100 text-red-900";
+    default:
+      return "bg-secondary text-secondary-foreground";
+  }
+}
+
 function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }) {
   const [listings, setListings] = useState<ListingWithFarmer[]>([]);
+  const [myOrders, setMyOrders] = useState<BuyerOrder[]>([]);
   const [qtys, setQtys] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
   async function refresh() {
-    const { data } = await supabase
-      .from("listings")
-      .select("*, farmers(name, village, trust_score)")
-      .eq("status", "active")
-      .order("id", { ascending: false });
-    if (data) setListings(data as ListingWithFarmer[]);
+    const [l, o] = await Promise.all([
+      supabase
+        .from("listings")
+        .select("*, farmers(name, village, trust_score)")
+        .eq("status", "active")
+        .order("id", { ascending: false }),
+      supabase
+        .from("orders")
+        .select("*, listings(crop_type), farmers(name)")
+        .eq("buyer_id", buyer.id)
+        .order("id", { ascending: false }),
+    ]);
+    if (l.data) setListings(l.data as ListingWithFarmer[]);
+    if (o.data) setMyOrders(o.data as BuyerOrder[]);
   }
 
   useEffect(() => {
     refresh();
-  }, []);
+    const interval = setInterval(refresh, 5000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buyer.id]);
 
   async function order(l: ListingWithFarmer) {
     const q = Number(qtys[l.id] || 0);
