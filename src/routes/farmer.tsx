@@ -210,3 +210,92 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
     </div>
   );
 }
+
+function statusClass(status: string) {
+  switch (status) {
+    case "placed":
+      return "bg-yellow-100 text-yellow-900";
+    case "confirmed":
+      return "bg-blue-100 text-blue-900";
+    case "delivered":
+      return "bg-green-100 text-green-900";
+    case "cancelled":
+      return "bg-red-100 text-red-900";
+    default:
+      return "bg-secondary text-secondary-foreground";
+  }
+}
+
+function OrderCard({ order, onChanged }: { order: OrderWithJoins; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+
+  async function setStatus(status: string) {
+    setBusy(true);
+    const { error } = await supabase.from("orders").update({ status }).eq("id", order.id);
+    if (error) {
+      setBusy(false);
+      return alert(error.message);
+    }
+    if (status === "cancelled") {
+      const { error: lErr } = await supabase
+        .from("listings")
+        .update({ status: "active" })
+        .eq("id", order.listing_id);
+      if (lErr) {
+        setBusy(false);
+        return alert(lErr.message);
+      }
+    }
+    setBusy(false);
+    onChanged();
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-md p-4 flex flex-col sm:flex-row sm:justify-between gap-3">
+      <div>
+        <div className="font-medium">
+          {order.listings?.crop_type ?? "—"} · {order.quantity_kg} kg
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Buyer: {order.buyers?.name ?? "—"} · Total: ₹{order.total_price}
+        </div>
+        <div className="mt-1 text-sm">
+          Status:{" "}
+          <span className={`text-xs px-2 py-0.5 rounded font-medium ${statusClass(order.status)}`}>
+            {order.status}
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 sm:self-center">
+        {order.status === "placed" && (
+          <>
+            <button
+              onClick={() => setStatus("confirmed")}
+              disabled={busy}
+              className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              Accept Order
+            </button>
+            <button
+              onClick={() => setStatus("cancelled")}
+              disabled={busy}
+              className="text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent disabled:opacity-50"
+            >
+              Decline Order
+            </button>
+          </>
+        )}
+        {order.status === "confirmed" && (
+          <button
+            onClick={() => setStatus("delivered")}
+            disabled={busy}
+            className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            Mark as Delivered
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
