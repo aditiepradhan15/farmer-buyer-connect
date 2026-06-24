@@ -201,22 +201,7 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
           ) : (
             <div className="space-y-2">
               {orders.map((o) => (
-                <div
-                  key={o.id}
-                  className="bg-card border border-border rounded-md p-4 flex justify-between"
-                >
-                  <div>
-                    <div className="font-medium">
-                      {o.listings?.crop_type ?? "—"} · {o.quantity_kg} kg
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Buyer: {o.buyers?.name ?? "—"} · Total: ₹{o.total_price}
-                    </div>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground self-start">
-                    {o.status}
-                  </span>
-                </div>
+                <OrderCard key={o.id} order={o} onChanged={refresh} />
               ))}
             </div>
           )}
