@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase, type Farmer, type Listing, type Order } from "@/lib/supabase";
+import { useLang, LanguageSwitcher } from "@/lib/i18n";
 
 export const Route = createFileRoute("/farmer")({
   head: () => ({ meta: [{ title: "Farmer — AgriConnect" }] }),
@@ -8,6 +9,7 @@ export const Route = createFileRoute("/farmer")({
 });
 
 function FarmerPage() {
+  const { t } = useLang();
   const [farmer, setFarmer] = useState<Farmer | null>(null);
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
@@ -24,31 +26,34 @@ function FarmerPage() {
       .maybeSingle();
     setLoading(false);
     if (error) return setError(error.message);
-    if (!data) return setError("No farmer found with that phone number.");
+    if (!data) return setError(t("noFarmer"));
     setFarmer(data as Farmer);
   }
 
   if (farmer) return <FarmerDashboard farmer={farmer} onLogout={() => setFarmer(null)} />;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <form
         onSubmit={login}
         className="w-full max-w-sm space-y-4 bg-card border border-border rounded-lg p-6"
       >
         <div>
           <Link to="/" className="text-sm text-muted-foreground hover:underline">
-            ← Back
+            ← {t("back")}
           </Link>
-          <h1 className="text-2xl font-semibold mt-2">Farmer Login</h1>
-          <p className="text-sm text-muted-foreground">Enter your phone number</p>
+          <h1 className="text-2xl font-semibold mt-2">{t("farmerLogin")}</h1>
+          <p className="text-sm text-muted-foreground">{t("enterPhone")}</p>
         </div>
         <input
           type="tel"
           required
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="Phone number"
+          placeholder={t("phonePlaceholder")}
           className="w-full px-3 py-2 border border-input rounded-md bg-background"
         />
         {error && <p className="text-sm text-destructive">{error}</p>}
@@ -57,7 +62,7 @@ function FarmerPage() {
           disabled={loading}
           className="w-full bg-primary text-primary-foreground rounded-md py-2 font-medium hover:bg-primary/90 disabled:opacity-50"
         >
-          {loading ? "Looking up..." : "Continue"}
+          {loading ? t("lookingUp") : t("continueBtn")}
         </button>
       </form>
     </div>
@@ -67,9 +72,11 @@ function FarmerPage() {
 type OrderWithJoins = Order & {
   buyers: { name: string } | null;
   listings: { crop_type: string } | null;
+  drivers: { name: string; vehicle_reg_number: string } | null;
 };
 
 function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () => void }) {
+  const { t } = useLang();
   const [listings, setListings] = useState<Listing[]>([]);
   const [orders, setOrders] = useState<OrderWithJoins[]>([]);
   const [crop, setCrop] = useState("");
@@ -82,7 +89,7 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
       supabase.from("listings").select("*").eq("farmer_id", farmer.id).order("id", { ascending: false }),
       supabase
         .from("orders")
-        .select("*, buyers(name), listings(crop_type)")
+        .select("*, buyers(name), listings(crop_type), drivers(name, vehicle_reg_number)")
         .eq("farmer_id", farmer.id)
         .order("id", { ascending: false }),
     ]);
@@ -92,6 +99,9 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
 
   useEffect(() => {
     refresh();
+    const interval = setInterval(refresh, 5000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [farmer.id]);
 
   async function createListing(e: React.FormEvent) {
@@ -115,28 +125,33 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center gap-3">
           <div>
-            <h1 className="text-xl font-semibold">Welcome, {farmer.name}</h1>
+            <h1 className="text-xl font-semibold">
+              {t("welcome")}, {farmer.name}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              {farmer.village} · Trust score: {farmer.trust_score}
+              {farmer.village} · {t("trustScore")}: {farmer.trust_score}
             </p>
           </div>
-          <button onClick={onLogout} className="text-sm text-muted-foreground hover:underline">
-            Logout
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            <button onClick={onLogout} className="text-sm text-muted-foreground hover:underline">
+              {t("logout")}
+            </button>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         <section className="bg-card border border-border rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Create New Listing</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("createListing")}</h2>
           <form onSubmit={createListing} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <input
               required
               value={crop}
               onChange={(e) => setCrop(e.target.value)}
-              placeholder="Crop type"
+              placeholder={t("cropType")}
               className="px-3 py-2 border border-input rounded-md bg-background"
             />
             <input
@@ -145,7 +160,7 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
               min="1"
               value={qty}
               onChange={(e) => setQty(e.target.value)}
-              placeholder="Quantity (kg)"
+              placeholder={t("quantityKg")}
               className="px-3 py-2 border border-input rounded-md bg-background"
             />
             <input
@@ -155,7 +170,7 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
               step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              placeholder="Price/kg"
+              placeholder={t("pricePerKg")}
               className="px-3 py-2 border border-input rounded-md bg-background"
             />
             <button
@@ -163,15 +178,15 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
               disabled={submitting}
               className="bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
             >
-              {submitting ? "Adding..." : "Add Listing"}
+              {submitting ? t("adding") : t("addListing")}
             </button>
           </form>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold mb-3">My Listings</h2>
+          <h2 className="text-lg font-semibold mb-3">{t("myListings")}</h2>
           {listings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No listings yet.</p>
+            <p className="text-sm text-muted-foreground">{t("noListings")}</p>
           ) : (
             <div className="space-y-2">
               {listings.map((l) => (
@@ -195,9 +210,9 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold mb-3">My Orders</h2>
+          <h2 className="text-lg font-semibold mb-3">{t("yourOrders")}</h2>
           {orders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No orders yet.</p>
+            <p className="text-sm text-muted-foreground">{t("noOrders")}</p>
           ) : (
             <div className="space-y-2">
               {orders.map((o) => (
@@ -227,6 +242,7 @@ function statusClass(status: string) {
 }
 
 function OrderCard({ order, onChanged }: { order: OrderWithJoins; onChanged: () => void }) {
+  const { t } = useLang();
   const [busy, setBusy] = useState(false);
 
   async function setStatus(status: string) {
@@ -257,10 +273,15 @@ function OrderCard({ order, onChanged }: { order: OrderWithJoins; onChanged: () 
           {order.listings?.crop_type ?? "—"} · {order.quantity_kg} kg
         </div>
         <div className="text-sm text-muted-foreground">
-          Buyer: {order.buyers?.name ?? "—"} · Total: ₹{order.total_price}
+          {t("buyer")}: {order.buyers?.name ?? "—"} · {t("total")}: ₹{order.total_price}
         </div>
+        {order.drivers && (
+          <div className="text-sm text-muted-foreground">
+            🚚 {t("driver")}: {order.drivers.name} · {t("vehicle")}: {order.drivers.vehicle_reg_number}
+          </div>
+        )}
         <div className="mt-1 text-sm">
-          Status:{" "}
+          {t("status")}:{" "}
           <span className={`text-xs px-2 py-0.5 rounded font-medium ${statusClass(order.status)}`}>
             {order.status}
           </span>
@@ -274,14 +295,14 @@ function OrderCard({ order, onChanged }: { order: OrderWithJoins; onChanged: () 
               disabled={busy}
               className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
-              Accept Order
+              {t("acceptOrder")}
             </button>
             <button
               onClick={() => setStatus("cancelled")}
               disabled={busy}
               className="text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent disabled:opacity-50"
             >
-              Decline Order
+              {t("declineOrder")}
             </button>
           </>
         )}
@@ -291,11 +312,10 @@ function OrderCard({ order, onChanged }: { order: OrderWithJoins; onChanged: () 
             disabled={busy}
             className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            Mark as Delivered
+            {t("markDelivered")}
           </button>
         )}
       </div>
     </div>
   );
 }
-

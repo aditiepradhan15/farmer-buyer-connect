@@ -23,6 +23,15 @@ export type Buyer = {
   business_type: string;
 };
 
+export type Driver = {
+  id: string;
+  phone: string;
+  name: string;
+  vehicle_type: string;
+  vehicle_reg_number: string;
+  trust_score: number;
+};
+
 export type Listing = {
   id: string;
   farmer_id: string;
@@ -37,6 +46,7 @@ export type Order = {
   buyer_id: string;
   farmer_id: string;
   listing_id: string;
+  driver_id: string | null;
   quantity_kg: number;
   total_price: number;
   status: string;
