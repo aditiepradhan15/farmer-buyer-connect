@@ -130,7 +130,7 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
       listing_id: l.id,
       quantity_kg: q,
       total_price: total,
-      status: "pending",
+      status: "placed",
     });
     if (oErr) {
       setBusy(null);
@@ -159,48 +159,83 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <h2 className="text-lg font-semibold mb-4">Marketplace</h2>
-        {listings.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No active listings.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {listings.map((l) => (
-              <div key={l.id} className="bg-card border border-border rounded-lg p-4 space-y-3">
-                <div>
-                  <div className="text-lg font-semibold">{l.crop_type}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {l.quantity_kg} kg available · ₹{l.price_per_kg}/kg
+      <main className="max-w-4xl mx-auto px-4 py-8 space-y-10">
+        <section>
+          <h2 className="text-lg font-semibold mb-4">Marketplace</h2>
+          {listings.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No active listings.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {listings.map((l) => (
+                <div key={l.id} className="bg-card border border-border rounded-lg p-4 space-y-3">
+                  <div>
+                    <div className="text-lg font-semibold">{l.crop_type}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {l.quantity_kg} kg available · ₹{l.price_per_kg}/kg
+                    </div>
+                  </div>
+                  <div className="text-sm">
+                    <div className="font-medium">{l.farmers?.name ?? "—"}</div>
+                    <div className="text-muted-foreground">
+                      {l.farmers?.village ?? "—"} · Trust: {l.farmers?.trust_score ?? "—"}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      max={l.quantity_kg}
+                      placeholder="Qty (kg)"
+                      value={qtys[l.id] ?? ""}
+                      onChange={(e) => setQtys((s) => ({ ...s, [l.id]: e.target.value }))}
+                      className="flex-1 px-3 py-2 border border-input rounded-md bg-background"
+                    />
+                    <button
+                      onClick={() => order(l)}
+                      disabled={busy === l.id}
+                      className="bg-primary text-primary-foreground rounded-md px-4 font-medium hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {busy === l.id ? "..." : "Order Now"}
+                    </button>
                   </div>
                 </div>
-                <div className="text-sm">
-                  <div className="font-medium">{l.farmers?.name ?? "—"}</div>
-                  <div className="text-muted-foreground">
-                    {l.farmers?.village ?? "—"} · Trust: {l.farmers?.trust_score ?? "—"}
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold mb-4">My Orders</h2>
+          {myOrders.length === 0 ? (
+            <p className="text-sm text-muted-foreground">You haven't placed any orders yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {myOrders.map((o) => (
+                <div
+                  key={o.id}
+                  className="bg-card border border-border rounded-md p-4 flex flex-col sm:flex-row sm:justify-between gap-2"
+                >
+                  <div>
+                    <div className="font-medium">
+                      {o.listings?.crop_type ?? "—"} · {o.quantity_kg} kg
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Farmer: {o.farmers?.name ?? "—"} · Total: ₹{o.total_price}
+                    </div>
+                  </div>
+                  <div className="text-sm sm:self-center">
+                    Status:{" "}
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded font-medium ${statusClass(o.status)}`}
+                    >
+                      {o.status}
+                    </span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    max={l.quantity_kg}
-                    placeholder="Qty (kg)"
-                    value={qtys[l.id] ?? ""}
-                    onChange={(e) => setQtys((s) => ({ ...s, [l.id]: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-input rounded-md bg-background"
-                  />
-                  <button
-                    onClick={() => order(l)}
-                    disabled={busy === l.id}
-                    className="bg-primary text-primary-foreground rounded-md px-4 font-medium hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    {busy === l.id ? "..." : "Order Now"}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );
