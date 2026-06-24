@@ -9,13 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LanguageRouteImport } from './routes/language'
 import { Route as FarmerRouteImport } from './routes/farmer'
+import { Route as DriverRouteImport } from './routes/driver'
 import { Route as BuyerRouteImport } from './routes/buyer'
 import { Route as IndexRouteImport } from './routes/index'
 
+const LanguageRoute = LanguageRouteImport.update({
+  id: '/language',
+  path: '/language',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FarmerRoute = FarmerRouteImport.update({
   id: '/farmer',
   path: '/farmer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DriverRoute = DriverRouteImport.update({
+  id: '/driver',
+  path: '/driver',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BuyerRoute = BuyerRouteImport.update({
@@ -32,40 +44,62 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/buyer': typeof BuyerRoute
+  '/driver': typeof DriverRoute
   '/farmer': typeof FarmerRoute
+  '/language': typeof LanguageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/buyer': typeof BuyerRoute
+  '/driver': typeof DriverRoute
   '/farmer': typeof FarmerRoute
+  '/language': typeof LanguageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/buyer': typeof BuyerRoute
+  '/driver': typeof DriverRoute
   '/farmer': typeof FarmerRoute
+  '/language': typeof LanguageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/buyer' | '/farmer'
+  fullPaths: '/' | '/buyer' | '/driver' | '/farmer' | '/language'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/buyer' | '/farmer'
-  id: '__root__' | '/' | '/buyer' | '/farmer'
+  to: '/' | '/buyer' | '/driver' | '/farmer' | '/language'
+  id: '__root__' | '/' | '/buyer' | '/driver' | '/farmer' | '/language'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BuyerRoute: typeof BuyerRoute
+  DriverRoute: typeof DriverRoute
   FarmerRoute: typeof FarmerRoute
+  LanguageRoute: typeof LanguageRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/language': {
+      id: '/language'
+      path: '/language'
+      fullPath: '/language'
+      preLoaderRoute: typeof LanguageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/farmer': {
       id: '/farmer'
       path: '/farmer'
       fullPath: '/farmer'
       preLoaderRoute: typeof FarmerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/driver': {
+      id: '/driver'
+      path: '/driver'
+      fullPath: '/driver'
+      preLoaderRoute: typeof DriverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/buyer': {
@@ -88,18 +122,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BuyerRoute: BuyerRoute,
+  DriverRoute: DriverRoute,
   FarmerRoute: FarmerRoute,
+  LanguageRoute: LanguageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
