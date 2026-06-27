@@ -113,11 +113,12 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
   const [codes, setCodes] = useState<Record<string, string>>({});
   const [otpMsg, setOtpMsg] = useState<Record<string, { kind: "error" | "info"; text: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [myTrust, setMyTrust] = useState<number>(buyer.trust_score ?? 0);
 
   async function refresh() {
     // CRITICAL: explicit column list excludes `delivery_otp`.
     const orderCols = `${BUYER_ORDER_COLUMNS}, listings(crop_type), farmers(name), drivers(name, vehicle_reg_number)`;
-    const [l, o, otpFlags] = await Promise.all([
+    const [l, o, otpFlags, me] = await Promise.all([
       supabase
         .from("listings")
         .select("*, farmers(name, village, trust_score)")
@@ -134,6 +135,7 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
         .select("id")
         .eq("buyer_id", buyer.id)
         .not("delivery_otp", "is", null),
+      supabase.from("buyers").select("trust_score").eq("id", buyer.id).maybeSingle(),
     ]);
     if (l.data) setListings(l.data as ListingWithFarmer[]);
     if (o.data) setMyOrders(o.data as unknown as BuyerOrder[]);
@@ -142,7 +144,9 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
       for (const r of otpFlags.data as { id: string }[]) map[r.id] = true;
       setOtpReady(map);
     }
+    if (me.data) setMyTrust((me.data.trust_score as number | null) ?? 0);
   }
+
 
   useEffect(() => {
     refresh();
