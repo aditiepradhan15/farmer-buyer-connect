@@ -6,7 +6,9 @@ import {
   type Listing,
   type Order,
   BUYER_ORDER_COLUMNS,
+  adjustTrustScore,
 } from "@/lib/supabase";
+
 import { useLang, LanguageSwitcher } from "@/lib/i18n";
 
 export const Route = createFileRoute("/buyer")({
@@ -111,11 +113,12 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
   const [codes, setCodes] = useState<Record<string, string>>({});
   const [otpMsg, setOtpMsg] = useState<Record<string, { kind: "error" | "info"; text: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [myTrust, setMyTrust] = useState<number>(buyer.trust_score ?? 0);
 
   async function refresh() {
     // CRITICAL: explicit column list excludes `delivery_otp`.
     const orderCols = `${BUYER_ORDER_COLUMNS}, listings(crop_type), farmers(name), drivers(name, vehicle_reg_number)`;
-    const [l, o, otpFlags] = await Promise.all([
+    const [l, o, otpFlags, me] = await Promise.all([
       supabase
         .from("listings")
         .select("*, farmers(name, village, trust_score)")
@@ -132,6 +135,7 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
         .select("id")
         .eq("buyer_id", buyer.id)
         .not("delivery_otp", "is", null),
+      supabase.from("buyers").select("trust_score").eq("id", buyer.id).maybeSingle(),
     ]);
     if (l.data) setListings(l.data as ListingWithFarmer[]);
     if (o.data) setMyOrders(o.data as unknown as BuyerOrder[]);
@@ -140,7 +144,9 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
       for (const r of otpFlags.data as { id: string }[]) map[r.id] = true;
       setOtpReady(map);
     }
+    if (me.data) setMyTrust((me.data.trust_score as number | null) ?? 0);
   }
+
 
   useEffect(() => {
     refresh();
@@ -153,19 +159,32 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
     const entered = (codes[orderId] || "").trim();
     if (!entered) return;
     setBusy(orderId);
-    // Compare server-side: only rows where delivery_otp matches will update.
-    // The OTP value is never sent to the client.
+    // Compare server-side: only rows where delivery_otp matches AND the order
+    // is still in `confirmed` will update. Gating on status ensures the
+    // transition (and the trust-score side effect) fires exactly once.
     const { data: matched, error: mErr } = await supabase
       .from("orders")
       .update({ status: "delivered" })
       .eq("id", orderId)
+      .eq("status", "confirmed")
       .eq("delivery_otp", entered)
-      .select("id");
+      .select("id, farmer_id, driver_id, buyer_id");
     if (mErr) {
       setBusy(null);
       return alert(mErr.message);
     }
     if (matched && matched.length > 0) {
+      const row = matched[0] as {
+        farmer_id: string;
+        driver_id: string | null;
+        buyer_id: string;
+      };
+      // Trust score updates on successful delivery — runs once per transition.
+      await Promise.all([
+        adjustTrustScore("farmers", row.farmer_id, +10),
+        row.driver_id ? adjustTrustScore("drivers", row.driver_id, +8) : Promise.resolve(),
+        adjustTrustScore("buyers", row.buyer_id, +5),
+      ]);
       setOtpMsg((s) => ({ ...s, [orderId]: { kind: "info", text: t("deliveryConfirmed") } }));
       setCodes((s) => ({ ...s, [orderId]: "" }));
       setBusy(null);
@@ -184,7 +203,21 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
       .update({ otp_failed_attempts: newCount })
       .eq("id", orderId);
     if (newCount >= 3) {
-      await supabase.from("orders").update({ status: "disputed" }).eq("id", orderId);
+      // Gate dispute transition on status=confirmed so the trust deduction
+      // only runs the single time we actually flip to disputed.
+      const { data: disputed } = await supabase
+        .from("orders")
+        .update({ status: "disputed" })
+        .eq("id", orderId)
+        .eq("status", "confirmed")
+        .select("id, farmer_id, driver_id");
+      if (disputed && disputed.length > 0) {
+        const row = disputed[0] as { farmer_id: string; driver_id: string | null };
+        await Promise.all([
+          adjustTrustScore("farmers", row.farmer_id, -15),
+          row.driver_id ? adjustTrustScore("drivers", row.driver_id, -20) : Promise.resolve(),
+        ]);
+      }
       setOtpMsg((s) => ({
         ...s,
         [orderId]: { kind: "error", text: t("flaggedForReview") },
@@ -199,6 +232,7 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
     setBusy(null);
     refresh();
   }
+
 
 
   async function order(l: ListingWithFarmer) {
@@ -236,7 +270,10 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
             <h1 className="text-xl font-semibold">
               {t("welcome")}, {buyer.name}
             </h1>
-            <p className="text-sm text-muted-foreground">{buyer.business_type}</p>
+            <p className="text-sm text-muted-foreground">
+              {buyer.business_type} · {t("trustScore")}: {myTrust}
+            </p>
+
           </div>
           <div className="flex flex-col items-end gap-1">
             <button onClick={onLogout} className="text-sm text-muted-foreground hover:underline">

@@ -83,19 +83,23 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
   const [qty, setQty] = useState("");
   const [price, setPrice] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [trust, setTrust] = useState<number>(farmer.trust_score ?? 0);
 
   async function refresh() {
-    const [l, o] = await Promise.all([
+    const [l, o, me] = await Promise.all([
       supabase.from("listings").select("*").eq("farmer_id", farmer.id).order("id", { ascending: false }),
       supabase
         .from("orders")
         .select("*, buyers(name), listings(crop_type), drivers(name, vehicle_reg_number)")
         .eq("farmer_id", farmer.id)
         .order("id", { ascending: false }),
+      supabase.from("farmers").select("trust_score").eq("id", farmer.id).maybeSingle(),
     ]);
     if (l.data) setListings(l.data as Listing[]);
     if (o.data) setOrders(o.data as OrderWithJoins[]);
+    if (me.data) setTrust((me.data.trust_score as number | null) ?? 0);
   }
+
 
   useEffect(() => {
     refresh();
@@ -131,8 +135,9 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
               {t("welcome")}, {farmer.name}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {farmer.village} · {t("trustScore")}: {farmer.trust_score}
+              {farmer.village} · {t("trustScore")}: {trust}
             </p>
+
           </div>
           <div className="flex flex-col items-end gap-1">
             <button onClick={onLogout} className="text-sm text-muted-foreground hover:underline">

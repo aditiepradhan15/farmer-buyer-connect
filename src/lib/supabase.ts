@@ -21,7 +21,9 @@ export type Buyer = {
   phone: string;
   name: string;
   business_type: string;
+  trust_score: number;
 };
+
 
 export type Driver = {
   id: string;
@@ -59,3 +61,26 @@ export type Order = {
 // the OTP value from the database — only submit a guess and get match/no-match.
 export const BUYER_ORDER_COLUMNS =
   "id, buyer_id, farmer_id, listing_id, driver_id, quantity_kg, total_price, status, otp_failed_attempts";
+
+/**
+ * Adjust a trust_score on farmers/drivers/buyers by `delta`, clamped at 0.
+ * Read-modify-write; callers must ensure it fires exactly once per transition
+ * (typically by gating on a status-conditional UPDATE returning a row).
+ */
+export async function adjustTrustScore(
+  table: "farmers" | "drivers" | "buyers",
+  id: string,
+  delta: number,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from(table)
+    .select("trust_score")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return;
+  const current = (data.trust_score as number | null) ?? 0;
+  const next = Math.max(0, current + delta);
+  if (next === current) return;
+  await supabase.from(table).update({ trust_score: next }).eq("id", id);
+}
+
