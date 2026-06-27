@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase, type Buyer, type Listing, type Order } from "@/lib/supabase";
+import {
+  supabase,
+  type Buyer,
+  type Listing,
+  type Order,
+  BUYER_ORDER_COLUMNS,
+} from "@/lib/supabase";
 import { useLang, LanguageSwitcher } from "@/lib/i18n";
 
 export const Route = createFileRoute("/buyer")({
