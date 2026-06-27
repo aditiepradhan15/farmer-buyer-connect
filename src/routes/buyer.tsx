@@ -95,6 +95,8 @@ function statusClass(status: string) {
       return "bg-green-100 text-green-900";
     case "cancelled":
       return "bg-red-100 text-red-900";
+    case "disputed":
+      return "bg-orange-100 text-orange-900";
     default:
       return "bg-secondary text-secondary-foreground";
   }
@@ -104,11 +106,16 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
   const { t } = useLang();
   const [listings, setListings] = useState<ListingWithFarmer[]>([]);
   const [myOrders, setMyOrders] = useState<BuyerOrder[]>([]);
+  const [otpReady, setOtpReady] = useState<Record<string, boolean>>({});
   const [qtys, setQtys] = useState<Record<string, string>>({});
+  const [codes, setCodes] = useState<Record<string, string>>({});
+  const [otpMsg, setOtpMsg] = useState<Record<string, { kind: "error" | "info"; text: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
   async function refresh() {
-    const [l, o] = await Promise.all([
+    // CRITICAL: explicit column list excludes `delivery_otp`.
+    const orderCols = `${BUYER_ORDER_COLUMNS}, listings(crop_type), farmers(name), drivers(name, vehicle_reg_number)`;
+    const [l, o, otpFlags] = await Promise.all([
       supabase
         .from("listings")
         .select("*, farmers(name, village, trust_score)")
@@ -116,12 +123,23 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
         .order("id", { ascending: false }),
       supabase
         .from("orders")
-        .select("*, listings(crop_type), farmers(name), drivers(name, vehicle_reg_number)")
+        .select(orderCols)
         .eq("buyer_id", buyer.id)
         .order("id", { ascending: false }),
+      // Get IDs of buyer's orders that have an OTP set, WITHOUT fetching the OTP value.
+      supabase
+        .from("orders")
+        .select("id")
+        .eq("buyer_id", buyer.id)
+        .not("delivery_otp", "is", null),
     ]);
     if (l.data) setListings(l.data as ListingWithFarmer[]);
-    if (o.data) setMyOrders(o.data as BuyerOrder[]);
+    if (o.data) setMyOrders(o.data as unknown as BuyerOrder[]);
+    if (otpFlags.data) {
+      const map: Record<string, boolean> = {};
+      for (const r of otpFlags.data as { id: string }[]) map[r.id] = true;
+      setOtpReady(map);
+    }
   }
 
   useEffect(() => {
@@ -130,6 +148,58 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buyer.id]);
+
+  async function confirmDelivery(orderId: string) {
+    const entered = (codes[orderId] || "").trim();
+    if (!entered) return;
+    setBusy(orderId);
+    // Compare server-side: only rows where delivery_otp matches will update.
+    // The OTP value is never sent to the client.
+    const { data: matched, error: mErr } = await supabase
+      .from("orders")
+      .update({ status: "delivered" })
+      .eq("id", orderId)
+      .eq("delivery_otp", entered)
+      .select("id");
+    if (mErr) {
+      setBusy(null);
+      return alert(mErr.message);
+    }
+    if (matched && matched.length > 0) {
+      setOtpMsg((s) => ({ ...s, [orderId]: { kind: "info", text: t("deliveryConfirmed") } }));
+      setCodes((s) => ({ ...s, [orderId]: "" }));
+      setBusy(null);
+      refresh();
+      return;
+    }
+    // Mismatch: increment otp_failed_attempts and possibly dispute.
+    const { data: attemptRow } = await supabase
+      .from("orders")
+      .select("otp_failed_attempts")
+      .eq("id", orderId)
+      .maybeSingle();
+    const newCount = ((attemptRow?.otp_failed_attempts as number) ?? 0) + 1;
+    await supabase
+      .from("orders")
+      .update({ otp_failed_attempts: newCount })
+      .eq("id", orderId);
+    if (newCount >= 3) {
+      await supabase.from("orders").update({ status: "disputed" }).eq("id", orderId);
+      setOtpMsg((s) => ({
+        ...s,
+        [orderId]: { kind: "error", text: t("flaggedForReview") },
+      }));
+    } else {
+      setOtpMsg((s) => ({
+        ...s,
+        [orderId]: { kind: "error", text: t("incorrectCode") },
+      }));
+    }
+    setCodes((s) => ({ ...s, [orderId]: "" }));
+    setBusy(null);
+    refresh();
+  }
+
 
   async function order(l: ListingWithFarmer) {
     const q = Number(qtys[l.id] || 0);
