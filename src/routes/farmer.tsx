@@ -135,8 +135,9 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
               {t("welcome")}, {farmer.name}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {farmer.village} · {t("trustScore")}: {farmer.trust_score}
+              {farmer.village} · {t("trustScore")}: {trust}
             </p>
+
           </div>
           <div className="flex flex-col items-end gap-1">
             <button onClick={onLogout} className="text-sm text-muted-foreground hover:underline">
