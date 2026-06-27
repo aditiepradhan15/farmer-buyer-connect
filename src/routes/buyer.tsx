@@ -301,29 +301,77 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
               {myOrders.map((o) => (
                 <div
                   key={o.id}
-                  className="bg-card border border-border rounded-md p-4 flex flex-col sm:flex-row sm:justify-between gap-2"
+                  className="bg-card border border-border rounded-md p-4 flex flex-col gap-3"
                 >
-                  <div>
-                    <div className="font-medium">
-                      {o.listings?.crop_type ?? "—"} · {o.quantity_kg} kg
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {t("farmer")}: {o.farmers?.name ?? "—"} · {t("total")}: ₹{o.total_price}
-                    </div>
-                    {o.drivers && (
-                      <div className="text-sm text-muted-foreground">
-                        🚚 {t("driver")}: {o.drivers.name} · {t("vehicle")}: {o.drivers.vehicle_reg_number}
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
+                    <div>
+                      <div className="font-medium">
+                        {o.listings?.crop_type ?? "—"} · {o.quantity_kg} kg
                       </div>
-                    )}
+                      <div className="text-sm text-muted-foreground">
+                        {t("farmer")}: {o.farmers?.name ?? "—"} · {t("total")}: ₹{o.total_price}
+                      </div>
+                      {o.drivers && (
+                        <div className="text-sm text-muted-foreground">
+                          🚚 {t("driver")}: {o.drivers.name} · {t("vehicle")}:{" "}
+                          {o.drivers.vehicle_reg_number}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-sm sm:self-center">
+                      {t("status")}:{" "}
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-medium ${statusClass(o.status)}`}
+                      >
+                        {o.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-sm sm:self-center">
-                    {t("status")}:{" "}
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded font-medium ${statusClass(o.status)}`}
-                    >
-                      {o.status}
-                    </span>
-                  </div>
+                  {o.status === "confirmed" && otpReady[o.id] && (
+                    <div className="border-t border-border pt-3">
+                      <label className="text-sm font-medium block mb-2">
+                        {t("enterDeliveryCode")}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          autoComplete="off"
+                          placeholder={t("codePlaceholder")}
+                          value={codes[o.id] ?? ""}
+                          onChange={(e) =>
+                            setCodes((s) => ({ ...s, [o.id]: e.target.value }))
+                          }
+                          className="flex-1 px-3 py-2 border border-input rounded-md bg-background tracking-widest"
+                        />
+                        <button
+                          onClick={() => confirmDelivery(o.id)}
+                          disabled={busy === o.id}
+                          className="bg-primary text-primary-foreground rounded-md px-4 font-medium hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          {busy === o.id ? "..." : t("confirmDelivery")}
+                        </button>
+                      </div>
+                      {otpMsg[o.id] && (
+                        <p
+                          className={`text-sm mt-2 ${
+                            otpMsg[o.id].kind === "error"
+                              ? "text-destructive"
+                              : "text-green-700"
+                          }`}
+                        >
+                          {otpMsg[o.id].text}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {o.status === "disputed" && otpMsg[o.id] && (
+                    <p className="text-sm text-destructive border-t border-border pt-3">
+                      {otpMsg[o.id].text}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
