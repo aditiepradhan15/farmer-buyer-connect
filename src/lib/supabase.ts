@@ -21,7 +21,9 @@ export type Buyer = {
   phone: string;
   name: string;
   business_type: string;
+  trust_score: number;
 };
+
 
 export type Driver = {
   id: string;
