@@ -97,9 +97,10 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
   const [available, setAvailable] = useState<PickupOrder[]>([]);
   const [mine, setMine] = useState<PickupOrder[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [trust, setTrust] = useState<number>(driver.trust_score ?? 0);
 
   async function refresh() {
-    const [a, m] = await Promise.all([
+    const [a, m, me] = await Promise.all([
       supabase
         .from("orders")
         .select("*, listings(crop_type), farmers(name, village), buyers(name)")
@@ -111,10 +112,13 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
         .select("*, listings(crop_type), farmers(name, village), buyers(name)")
         .eq("driver_id", driver.id)
         .order("id", { ascending: false }),
+      supabase.from("drivers").select("trust_score").eq("id", driver.id).maybeSingle(),
     ]);
     if (a.data) setAvailable(a.data as PickupOrder[]);
     if (m.data) setMine(m.data as PickupOrder[]);
+    if (me.data) setTrust((me.data.trust_score as number | null) ?? 0);
   }
+
 
   useEffect(() => {
     refresh();
