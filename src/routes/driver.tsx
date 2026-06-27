@@ -85,6 +85,8 @@ function statusClass(status: string) {
       return "bg-green-100 text-green-900";
     case "cancelled":
       return "bg-red-100 text-red-900";
+    case "disputed":
+      return "bg-orange-100 text-orange-900";
     default:
       return "bg-secondary text-secondary-foreground";
   }
