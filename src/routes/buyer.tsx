@@ -6,7 +6,9 @@ import {
   type Listing,
   type Order,
   BUYER_ORDER_COLUMNS,
+  adjustTrustScore,
 } from "@/lib/supabase";
+
 import { useLang, LanguageSwitcher } from "@/lib/i18n";
 
 export const Route = createFileRoute("/buyer")({
