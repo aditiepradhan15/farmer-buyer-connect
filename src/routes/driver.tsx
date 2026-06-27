@@ -132,16 +132,6 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
     refresh();
   }
 
-  async function markDelivered(orderId: string) {
-    setBusy(orderId);
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: "delivered" })
-      .eq("id", orderId);
-    setBusy(null);
-    if (error) return alert(error.message);
-    refresh();
-  }
 
   async function startDelivery(order: PickupOrder) {
     if (order.delivery_otp) {
