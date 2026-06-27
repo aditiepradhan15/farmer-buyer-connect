@@ -165,8 +165,9 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
               {t("welcome")}, {driver.name}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {driver.vehicle_type} · {driver.vehicle_reg_number} · {t("trustScore")}: {driver.trust_score}
+              {driver.vehicle_type} · {driver.vehicle_reg_number} · {t("trustScore")}: {trust}
             </p>
+
           </div>
           <div className="flex flex-col items-end gap-1">
             <button onClick={onLogout} className="text-sm text-muted-foreground hover:underline">
