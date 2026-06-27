@@ -270,7 +270,10 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
             <h1 className="text-xl font-semibold">
               {t("welcome")}, {buyer.name}
             </h1>
-            <p className="text-sm text-muted-foreground">{buyer.business_type}</p>
+            <p className="text-sm text-muted-foreground">
+              {buyer.business_type} · {t("trustScore")}: {myTrust}
+            </p>
+
           </div>
           <div className="flex flex-col items-end gap-1">
             <button onClick={onLogout} className="text-sm text-muted-foreground hover:underline">
