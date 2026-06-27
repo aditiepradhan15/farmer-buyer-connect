@@ -50,4 +50,12 @@ export type Order = {
   quantity_kg: number;
   total_price: number;
   status: string;
+  delivery_otp?: string | null;
+  otp_failed_attempts?: number;
 };
+
+// Explicit column list for queries from the buyer's side.
+// CRITICAL: must NEVER include `delivery_otp`. The buyer must never receive
+// the OTP value from the database — only submit a guess and get match/no-match.
+export const BUYER_ORDER_COLUMNS =
+  "id, buyer_id, farmer_id, listing_id, driver_id, quantity_kg, total_price, status, otp_failed_attempts";

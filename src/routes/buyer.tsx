@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase, type Buyer, type Listing, type Order } from "@/lib/supabase";
+import {
+  supabase,
+  type Buyer,
+  type Listing,
+  type Order,
+  BUYER_ORDER_COLUMNS,
+} from "@/lib/supabase";
 import { useLang, LanguageSwitcher } from "@/lib/i18n";
 
 export const Route = createFileRoute("/buyer")({
@@ -89,6 +95,8 @@ function statusClass(status: string) {
       return "bg-green-100 text-green-900";
     case "cancelled":
       return "bg-red-100 text-red-900";
+    case "disputed":
+      return "bg-orange-100 text-orange-900";
     default:
       return "bg-secondary text-secondary-foreground";
   }
@@ -98,11 +106,16 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
   const { t } = useLang();
   const [listings, setListings] = useState<ListingWithFarmer[]>([]);
   const [myOrders, setMyOrders] = useState<BuyerOrder[]>([]);
+  const [otpReady, setOtpReady] = useState<Record<string, boolean>>({});
   const [qtys, setQtys] = useState<Record<string, string>>({});
+  const [codes, setCodes] = useState<Record<string, string>>({});
+  const [otpMsg, setOtpMsg] = useState<Record<string, { kind: "error" | "info"; text: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
   async function refresh() {
-    const [l, o] = await Promise.all([
+    // CRITICAL: explicit column list excludes `delivery_otp`.
+    const orderCols = `${BUYER_ORDER_COLUMNS}, listings(crop_type), farmers(name), drivers(name, vehicle_reg_number)`;
+    const [l, o, otpFlags] = await Promise.all([
       supabase
         .from("listings")
         .select("*, farmers(name, village, trust_score)")
@@ -110,12 +123,23 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
         .order("id", { ascending: false }),
       supabase
         .from("orders")
-        .select("*, listings(crop_type), farmers(name), drivers(name, vehicle_reg_number)")
+        .select(orderCols)
         .eq("buyer_id", buyer.id)
         .order("id", { ascending: false }),
+      // Get IDs of buyer's orders that have an OTP set, WITHOUT fetching the OTP value.
+      supabase
+        .from("orders")
+        .select("id")
+        .eq("buyer_id", buyer.id)
+        .not("delivery_otp", "is", null),
     ]);
     if (l.data) setListings(l.data as ListingWithFarmer[]);
-    if (o.data) setMyOrders(o.data as BuyerOrder[]);
+    if (o.data) setMyOrders(o.data as unknown as BuyerOrder[]);
+    if (otpFlags.data) {
+      const map: Record<string, boolean> = {};
+      for (const r of otpFlags.data as { id: string }[]) map[r.id] = true;
+      setOtpReady(map);
+    }
   }
 
   useEffect(() => {
@@ -124,6 +148,58 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buyer.id]);
+
+  async function confirmDelivery(orderId: string) {
+    const entered = (codes[orderId] || "").trim();
+    if (!entered) return;
+    setBusy(orderId);
+    // Compare server-side: only rows where delivery_otp matches will update.
+    // The OTP value is never sent to the client.
+    const { data: matched, error: mErr } = await supabase
+      .from("orders")
+      .update({ status: "delivered" })
+      .eq("id", orderId)
+      .eq("delivery_otp", entered)
+      .select("id");
+    if (mErr) {
+      setBusy(null);
+      return alert(mErr.message);
+    }
+    if (matched && matched.length > 0) {
+      setOtpMsg((s) => ({ ...s, [orderId]: { kind: "info", text: t("deliveryConfirmed") } }));
+      setCodes((s) => ({ ...s, [orderId]: "" }));
+      setBusy(null);
+      refresh();
+      return;
+    }
+    // Mismatch: increment otp_failed_attempts and possibly dispute.
+    const { data: attemptRow } = await supabase
+      .from("orders")
+      .select("otp_failed_attempts")
+      .eq("id", orderId)
+      .maybeSingle();
+    const newCount = ((attemptRow?.otp_failed_attempts as number) ?? 0) + 1;
+    await supabase
+      .from("orders")
+      .update({ otp_failed_attempts: newCount })
+      .eq("id", orderId);
+    if (newCount >= 3) {
+      await supabase.from("orders").update({ status: "disputed" }).eq("id", orderId);
+      setOtpMsg((s) => ({
+        ...s,
+        [orderId]: { kind: "error", text: t("flaggedForReview") },
+      }));
+    } else {
+      setOtpMsg((s) => ({
+        ...s,
+        [orderId]: { kind: "error", text: t("incorrectCode") },
+      }));
+    }
+    setCodes((s) => ({ ...s, [orderId]: "" }));
+    setBusy(null);
+    refresh();
+  }
+
 
   async function order(l: ListingWithFarmer) {
     const q = Number(qtys[l.id] || 0);
@@ -225,29 +301,77 @@ function Marketplace({ buyer, onLogout }: { buyer: Buyer; onLogout: () => void }
               {myOrders.map((o) => (
                 <div
                   key={o.id}
-                  className="bg-card border border-border rounded-md p-4 flex flex-col sm:flex-row sm:justify-between gap-2"
+                  className="bg-card border border-border rounded-md p-4 flex flex-col gap-3"
                 >
-                  <div>
-                    <div className="font-medium">
-                      {o.listings?.crop_type ?? "—"} · {o.quantity_kg} kg
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {t("farmer")}: {o.farmers?.name ?? "—"} · {t("total")}: ₹{o.total_price}
-                    </div>
-                    {o.drivers && (
-                      <div className="text-sm text-muted-foreground">
-                        🚚 {t("driver")}: {o.drivers.name} · {t("vehicle")}: {o.drivers.vehicle_reg_number}
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
+                    <div>
+                      <div className="font-medium">
+                        {o.listings?.crop_type ?? "—"} · {o.quantity_kg} kg
                       </div>
-                    )}
+                      <div className="text-sm text-muted-foreground">
+                        {t("farmer")}: {o.farmers?.name ?? "—"} · {t("total")}: ₹{o.total_price}
+                      </div>
+                      {o.drivers && (
+                        <div className="text-sm text-muted-foreground">
+                          🚚 {t("driver")}: {o.drivers.name} · {t("vehicle")}:{" "}
+                          {o.drivers.vehicle_reg_number}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-sm sm:self-center">
+                      {t("status")}:{" "}
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-medium ${statusClass(o.status)}`}
+                      >
+                        {o.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-sm sm:self-center">
-                    {t("status")}:{" "}
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded font-medium ${statusClass(o.status)}`}
-                    >
-                      {o.status}
-                    </span>
-                  </div>
+                  {o.status === "confirmed" && otpReady[o.id] && (
+                    <div className="border-t border-border pt-3">
+                      <label className="text-sm font-medium block mb-2">
+                        {t("enterDeliveryCode")}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          autoComplete="off"
+                          placeholder={t("codePlaceholder")}
+                          value={codes[o.id] ?? ""}
+                          onChange={(e) =>
+                            setCodes((s) => ({ ...s, [o.id]: e.target.value }))
+                          }
+                          className="flex-1 px-3 py-2 border border-input rounded-md bg-background tracking-widest"
+                        />
+                        <button
+                          onClick={() => confirmDelivery(o.id)}
+                          disabled={busy === o.id}
+                          className="bg-primary text-primary-foreground rounded-md px-4 font-medium hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          {busy === o.id ? "..." : t("confirmDelivery")}
+                        </button>
+                      </div>
+                      {otpMsg[o.id] && (
+                        <p
+                          className={`text-sm mt-2 ${
+                            otpMsg[o.id].kind === "error"
+                              ? "text-destructive"
+                              : "text-green-700"
+                          }`}
+                        >
+                          {otpMsg[o.id].text}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {o.status === "disputed" && otpMsg[o.id] && (
+                    <p className="text-sm text-destructive border-t border-border pt-3">
+                      {otpMsg[o.id].text}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

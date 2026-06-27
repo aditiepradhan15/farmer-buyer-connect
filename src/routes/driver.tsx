@@ -85,6 +85,8 @@ function statusClass(status: string) {
       return "bg-green-100 text-green-900";
     case "cancelled":
       return "bg-red-100 text-red-900";
+    case "disputed":
+      return "bg-orange-100 text-orange-900";
     default:
       return "bg-secondary text-secondary-foreground";
   }
@@ -132,12 +134,19 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
     refresh();
   }
 
-  async function markDelivered(orderId: string) {
-    setBusy(orderId);
+
+  async function startDelivery(order: PickupOrder) {
+    if (order.delivery_otp) {
+      // OTP already generated; just refresh display
+      refresh();
+      return;
+    }
+    setBusy(order.id);
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
     const { error } = await supabase
       .from("orders")
-      .update({ status: "delivered" })
-      .eq("id", orderId);
+      .update({ delivery_otp: otp })
+      .eq("id", order.id);
     setBusy(null);
     if (error) return alert(error.message);
     refresh();
@@ -230,14 +239,22 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
                       </span>
                     </div>
                   </div>
-                  {o.status === "confirmed" && (
+                  {o.status === "confirmed" && !o.delivery_otp && (
                     <button
-                      onClick={() => markDelivered(o.id)}
+                      onClick={() => startDelivery(o)}
                       disabled={busy === o.id}
                       className="sm:self-center bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
                     >
-                      {busy === o.id ? "..." : t("markDelivered")}
+                      {busy === o.id ? "..." : t("startDelivery")}
                     </button>
+                  )}
+                  {o.status === "confirmed" && o.delivery_otp && (
+                    <div className="sm:self-center bg-yellow-50 border border-yellow-300 rounded-md px-4 py-3 text-center">
+                      <div className="text-xs text-yellow-900 mb-1">{t("giveCodeToBuyer")}</div>
+                      <div className="text-3xl font-bold tracking-widest text-yellow-900">
+                        {o.delivery_otp}
+                      </div>
+                    </div>
                   )}
                 </div>
               ))}
