@@ -1,17 +1,26 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { supabase } from "@/lib/supabase";
+import { supabase, normalizePhone } from "@/lib/supabase";
 import { useLang, LanguageSwitcher } from "@/lib/i18n";
+
+export type VerifiedResult = "ok" | "register" | string;
 
 type Props = {
   title: string;
-  /** Called with the verified phone number. Return an error message string to display, or null on success. */
-  onVerified: (phone: string) => Promise<string | null>;
+  /**
+   * Called with the verified (normalized) phone. Return:
+   *  - "ok" if the user was found and logged in
+   *  - "register" to switch into the registration form
+   *  - any other string to display as an error
+   */
+  onVerified: (phone: string) => Promise<VerifiedResult>;
+  /** Renders the role-specific registration form when the phone isn't yet registered. */
+  renderRegister?: (phone: string) => ReactNode;
 };
 
-export function OtpLogin({ title, onVerified }: Props) {
+export function OtpLogin({ title, onVerified, renderRegister }: Props) {
   const { t } = useLang();
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "register">("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -21,8 +30,10 @@ export function OtpLogin({ title, onVerified }: Props) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    const normalized = normalizePhone(phone);
+    setPhone(normalized);
     const { error: fnError } = await supabase.functions.invoke("send-otp", {
-      body: { phone: phone.trim() },
+      body: { phone: normalized },
     });
     setLoading(false);
     if (fnError) return setError(fnError.message || t("otpSendFailed"));
@@ -34,16 +45,34 @@ export function OtpLogin({ title, onVerified }: Props) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    const normalized = normalizePhone(phone);
     const { data, error: fnError } = await supabase.functions.invoke("verify-otp", {
-      body: { phone: phone.trim(), code: code.trim() },
+      body: { phone: normalized, code: code.trim() },
     });
     if (fnError || !data || (data as { verified?: boolean }).verified === false) {
       setLoading(false);
       return setError(t("incorrectCode"));
     }
-    const loginError = await onVerified(phone.trim());
+    const result = await onVerified(normalized);
     setLoading(false);
-    if (loginError) setError(loginError);
+    if (result === "ok") return;
+    if (result === "register") {
+      if (renderRegister) setStep("register");
+      else setError(t("otpSendFailed"));
+      return;
+    }
+    setError(result);
+  }
+
+  if (step === "register" && renderRegister) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4 relative">
+        <div className="absolute top-4 right-4">
+          <LanguageSwitcher />
+        </div>
+        <div className="w-full max-w-sm">{renderRegister(normalizePhone(phone))}</div>
+      </div>
+    );
   }
 
   return (
