@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   supabase,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/supabase";
 
 import { useLang, LanguageSwitcher } from "@/lib/i18n";
+import { OtpLogin } from "@/components/OtpLogin";
 
 export const Route = createFileRoute("/buyer")({
   head: () => ({ meta: [{ title: "Buyer — AgriConnect" }] }),
@@ -19,63 +20,27 @@ export const Route = createFileRoute("/buyer")({
 function BuyerPage() {
   const { t } = useLang();
   const [buyer, setBuyer] = useState<Buyer | null>(null);
-  const [phone, setPhone] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function login(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const { data, error } = await supabase
-      .from("buyers")
-      .select("*")
-      .eq("phone", phone.trim())
-      .maybeSingle();
-    setLoading(false);
-    if (error) return setError(error.message);
-    if (!data) return setError(t("noBuyer"));
-    setBuyer(data as Buyer);
-  }
 
   if (buyer) return <Marketplace buyer={buyer} onLogout={() => setBuyer(null)} />;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative">
-      <div className="absolute top-4 right-4">
-        <LanguageSwitcher />
-      </div>
-      <form
-        onSubmit={login}
-        className="w-full max-w-sm space-y-4 bg-card border border-border rounded-lg p-6"
-      >
-        <div>
-          <Link to="/" className="text-sm text-muted-foreground hover:underline">
-            ← {t("back")}
-          </Link>
-          <h1 className="text-2xl font-semibold mt-2">{t("buyerLogin")}</h1>
-          <p className="text-sm text-muted-foreground">{t("enterPhone")}</p>
-        </div>
-        <input
-          type="tel"
-          required
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder={t("phonePlaceholder")}
-          className="w-full px-3 py-2 border border-input rounded-md bg-background"
-        />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-primary text-primary-foreground rounded-md py-2 font-medium hover:bg-primary/90 disabled:opacity-50"
-        >
-          {loading ? t("lookingUp") : t("continueBtn")}
-        </button>
-      </form>
-    </div>
+    <OtpLogin
+      title={t("buyerLogin")}
+      onVerified={async (phone) => {
+        const { data, error } = await supabase
+          .from("buyers")
+          .select("*")
+          .eq("phone", phone)
+          .maybeSingle();
+        if (error) return error.message;
+        if (!data) return t("noBuyer");
+        setBuyer(data as Buyer);
+        return null;
+      }}
+    />
   );
 }
+
 
 type ListingWithFarmer = Listing & {
   farmers: { name: string; village: string; trust_score: number } | null;

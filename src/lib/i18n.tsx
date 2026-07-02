@@ -75,6 +75,12 @@ const translations: Record<Lang, Dict> = {
     flaggedForReview: "Too many incorrect attempts. This order has been flagged for review.",
     deliveryConfirmed: "Delivery confirmed. Thank you!",
     codePlaceholder: "6-digit code",
+    sendOtp: "Send OTP",
+    verifyOtp: "Verify OTP",
+    enterOtp: "Enter the 6-digit code sent to your phone",
+    otpSentTo: "Code sent to",
+    changePhone: "Change phone number",
+    otpSendFailed: "Could not send code. Please try again.",
   },
   hi: {
     appName: "एग्रीकनेक्ट",
@@ -145,6 +151,12 @@ const translations: Record<Lang, Dict> = {
     flaggedForReview: "बहुत सारे गलत प्रयास। यह ऑर्डर समीक्षा के लिए चिह्नित किया गया है।",
     deliveryConfirmed: "डिलीवरी की पुष्टि हो गई। धन्यवाद!",
     codePlaceholder: "6-अंकीय कोड",
+    sendOtp: "OTP भेजें",
+    verifyOtp: "OTP सत्यापित करें",
+    enterOtp: "अपने फ़ोन पर भेजा गया 6-अंकीय कोड दर्ज करें",
+    otpSentTo: "कोड भेजा गया",
+    changePhone: "फ़ोन नंबर बदलें",
+    otpSendFailed: "कोड भेजा नहीं जा सका। कृपया पुनः प्रयास करें।",
   },
   mr: {
     appName: "अ‍ॅग्रीकनेक्ट",
@@ -215,6 +227,12 @@ const translations: Record<Lang, Dict> = {
     flaggedForReview: "खूप चुकीचे प्रयत्न. हा ऑर्डर पुनरावलोकनासाठी चिन्हांकित केला आहे.",
     deliveryConfirmed: "डिलिव्हरीची पुष्टी झाली. धन्यवाद!",
     codePlaceholder: "6-अंकी कोड",
+    sendOtp: "OTP पाठवा",
+    verifyOtp: "OTP सत्यापित करा",
+    enterOtp: "तुमच्या फोनवर पाठवलेला 6-अंकी कोड टाका",
+    otpSentTo: "कोड पाठवला",
+    changePhone: "फोन नंबर बदला",
+    otpSendFailed: "कोड पाठवता आला नाही. कृपया पुन्हा प्रयत्न करा.",
   },
 };
 
