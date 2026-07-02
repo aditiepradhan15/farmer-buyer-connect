@@ -8,6 +8,18 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+/**
+ * Normalize a phone number for lookups. If it already starts with "+", pass through.
+ * Otherwise strip non-digits; a 10-digit number gets a "+91" prefix.
+ */
+export function normalizePhone(input: string): string {
+  const trimmed = (input ?? "").trim();
+  if (trimmed.startsWith("+")) return trimmed;
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) return `+91${digits}`;
+  return trimmed;
+}
+
 export type Farmer = {
   id: string;
   phone: string;

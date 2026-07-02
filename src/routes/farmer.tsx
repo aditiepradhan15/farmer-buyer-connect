@@ -25,11 +25,76 @@ function FarmerPage() {
           .eq("phone", phone)
           .maybeSingle();
         if (error) return error.message;
-        if (!data) return t("noFarmer");
+        if (!data) return "register";
         setFarmer(data as Farmer);
-        return null;
+        return "ok";
       }}
+      renderRegister={(phone) => (
+        <FarmerRegister phone={phone} onRegistered={(f) => setFarmer(f)} />
+      )}
     />
+  );
+}
+
+function FarmerRegister({
+  phone,
+  onRegistered,
+}: {
+  phone: string;
+  onRegistered: (f: Farmer) => void;
+}) {
+  const { t } = useLang();
+  const [name, setName] = useState("");
+  const [village, setVillage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const { data, error: insErr } = await supabase
+      .from("farmers")
+      .insert({ phone, name: name.trim(), village: village.trim() })
+      .select("*")
+      .maybeSingle();
+    setBusy(false);
+    if (insErr || !data) return setError(insErr?.message ?? "Failed to register");
+    onRegistered(data as Farmer);
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4 bg-card border border-border rounded-lg p-6">
+      <div>
+        <h1 className="text-2xl font-semibold">{t("registerTitle")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("registerHint")}</p>
+        <p className="text-sm mt-2">
+          {t("otpSentTo")}: <span className="font-medium">{phone}</span>
+        </p>
+      </div>
+      <input
+        required
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder={t("yourName")}
+        className="w-full px-3 py-2 border border-input rounded-md bg-background"
+      />
+      <input
+        required
+        value={village}
+        onChange={(e) => setVillage(e.target.value)}
+        placeholder={t("villageLabel")}
+        className="w-full px-3 py-2 border border-input rounded-md bg-background"
+      />
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <button
+        type="submit"
+        disabled={busy}
+        className="w-full bg-primary text-primary-foreground rounded-md py-2 font-medium hover:bg-primary/90 disabled:opacity-50"
+      >
+        {busy ? t("registering") : t("registerBtn")}
+      </button>
+    </form>
   );
 }
 
