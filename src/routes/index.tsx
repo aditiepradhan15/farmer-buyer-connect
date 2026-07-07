@@ -54,13 +54,6 @@ function Index() {
             <div className="text-xl font-semibold">🚚 {t("iAmDriver")}</div>
             <div className="mt-2 text-sm text-muted-foreground">{t("driverTagline")}</div>
           </Link>
-          <Link
-            to="/admin"
-            className="rounded-lg border border-border bg-card p-6 hover:bg-accent transition-colors"
-          >
-            <div className="text-xl font-semibold">🛡️ Admin</div>
-            <div className="mt-2 text-sm text-muted-foreground">Platform administration</div>
-          </Link>
         </div>
       </div>
     </div>
