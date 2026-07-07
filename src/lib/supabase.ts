@@ -46,6 +46,12 @@ export type Driver = {
   trust_score: number;
 };
 
+export type Admin = {
+  id: string;
+  phone: string;
+  name: string;
+};
+
 export type Listing = {
   id: string;
   farmer_id: string;
