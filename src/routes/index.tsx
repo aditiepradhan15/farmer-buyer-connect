@@ -32,7 +32,7 @@ function Index() {
           <h1 className="text-4xl font-bold text-foreground">{t("appName")}</h1>
           <p className="mt-3 text-muted-foreground">{t("whoAreYou")}</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link
             to="/farmer"
             className="rounded-lg border border-border bg-card p-6 hover:bg-accent transition-colors"
