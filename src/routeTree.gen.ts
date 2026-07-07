@@ -13,7 +13,7 @@ import { Route as LanguageRouteImport } from './routes/language'
 import { Route as FarmerRouteImport } from './routes/farmer'
 import { Route as DriverRouteImport } from './routes/driver'
 import { Route as BuyerRouteImport } from './routes/buyer'
-import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AdminMmRouteImport } from './routes/admin-mm'
 import { Route as IndexRouteImport } from './routes/index'
 
 const LanguageRoute = LanguageRouteImport.update({
@@ -36,9 +36,9 @@ const BuyerRoute = BuyerRouteImport.update({
   path: '/buyer',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AdminMmRoute = AdminMmRouteImport.update({
+  id: '/admin-mm',
+  path: '/admin-mm',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -49,7 +49,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin-mm': typeof AdminMmRoute
   '/buyer': typeof BuyerRoute
   '/driver': typeof DriverRoute
   '/farmer': typeof FarmerRoute
@@ -57,7 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin-mm': typeof AdminMmRoute
   '/buyer': typeof BuyerRoute
   '/driver': typeof DriverRoute
   '/farmer': typeof FarmerRoute
@@ -66,7 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin-mm': typeof AdminMmRoute
   '/buyer': typeof BuyerRoute
   '/driver': typeof DriverRoute
   '/farmer': typeof FarmerRoute
@@ -74,13 +74,13 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/buyer' | '/driver' | '/farmer' | '/language'
+  fullPaths: '/' | '/admin-mm' | '/buyer' | '/driver' | '/farmer' | '/language'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/buyer' | '/driver' | '/farmer' | '/language'
+  to: '/' | '/admin-mm' | '/buyer' | '/driver' | '/farmer' | '/language'
   id:
     | '__root__'
     | '/'
-    | '/admin'
+    | '/admin-mm'
     | '/buyer'
     | '/driver'
     | '/farmer'
@@ -89,7 +89,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminMmRoute: typeof AdminMmRoute
   BuyerRoute: typeof BuyerRoute
   DriverRoute: typeof DriverRoute
   FarmerRoute: typeof FarmerRoute
@@ -126,11 +126,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BuyerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/admin-mm': {
+      id: '/admin-mm'
+      path: '/admin-mm'
+      fullPath: '/admin-mm'
+      preLoaderRoute: typeof AdminMmRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -145,7 +145,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminMmRoute: AdminMmRoute,
   BuyerRoute: BuyerRoute,
   DriverRoute: DriverRoute,
   FarmerRoute: FarmerRoute,
