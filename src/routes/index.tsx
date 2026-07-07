@@ -32,7 +32,7 @@ function Index() {
           <h1 className="text-4xl font-bold text-foreground">{t("appName")}</h1>
           <p className="mt-3 text-muted-foreground">{t("whoAreYou")}</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             to="/farmer"
             className="rounded-lg border border-border bg-card p-6 hover:bg-accent transition-colors"
@@ -53,6 +53,13 @@ function Index() {
           >
             <div className="text-xl font-semibold">🚚 {t("iAmDriver")}</div>
             <div className="mt-2 text-sm text-muted-foreground">{t("driverTagline")}</div>
+          </Link>
+          <Link
+            to="/admin"
+            className="rounded-lg border border-border bg-card p-6 hover:bg-accent transition-colors"
+          >
+            <div className="text-xl font-semibold">🛡️ Admin</div>
+            <div className="mt-2 text-sm text-muted-foreground">Platform administration</div>
           </Link>
         </div>
       </div>
