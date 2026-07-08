@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase, adjustTrustScore } from "@/lib/supabase";
 
-const ADMIN_PASSWORD = "REPLACE_THIS_WITH_YOUR_PASSWORD";
+const ADMIN_PASSWORD = "aditie@1522";
 
 export const Route = createFileRoute("/admin-mm")({
   head: () => ({ meta: [{ title: "Admin" }, { name: "robots", content: "noindex" }] }),
