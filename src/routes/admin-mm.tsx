@@ -35,6 +35,12 @@ function AdminMM() {
   const [authed, setAuthed] = useState(false);
   const [error, setError] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem("adminAuth") === "true") {
+      setAuthed(true);
+    }
+  }, []);
+
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -42,6 +48,7 @@ function AdminMM() {
           onSubmit={(e) => {
             e.preventDefault();
             if (pwd === ADMIN_PASSWORD) {
+              localStorage.setItem("adminAuth", "true");
               setAuthed(true);
               setError(false);
             } else {
@@ -71,7 +78,7 @@ function AdminMM() {
     );
   }
 
-  return <Panel />;
+  return <Panel onLogout={() => { localStorage.removeItem("adminAuth"); setAuthed(false); setPwd(""); }} />;
 }
 
 function statusClass(status: string) {
