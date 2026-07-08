@@ -35,6 +35,12 @@ function AdminMM() {
   const [authed, setAuthed] = useState(false);
   const [error, setError] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem("adminAuth") === "true") {
+      setAuthed(true);
+    }
+  }, []);
+
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -42,6 +48,7 @@ function AdminMM() {
           onSubmit={(e) => {
             e.preventDefault();
             if (pwd === ADMIN_PASSWORD) {
+              localStorage.setItem("adminAuth", "true");
               setAuthed(true);
               setError(false);
             } else {
@@ -71,7 +78,7 @@ function AdminMM() {
     );
   }
 
-  return <Panel />;
+  return <Panel onLogout={() => { localStorage.removeItem("adminAuth"); setAuthed(false); setPwd(""); }} />;
 }
 
 function statusClass(status: string) {
@@ -87,7 +94,7 @@ function statusClass(status: string) {
   }
 }
 
-function Panel() {
+function Panel({ onLogout }: { onLogout: () => void }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [disputed, setDisputed] = useState<DisputedRow[]>([]);
   const [recent, setRecent] = useState<RecentOrder[]>([]);
@@ -156,6 +163,14 @@ function Panel() {
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
+        <div className="flex justify-end">
+          <button
+            onClick={onLogout}
+            className="bg-secondary text-secondary-foreground border border-border rounded-md px-4 py-2 text-sm font-medium hover:bg-accent"
+          >
+            Logout
+          </button>
+        </div>
         <section>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
