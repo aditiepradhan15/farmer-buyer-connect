@@ -196,7 +196,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
               {disputed.map((o) => (
                 <div key={o.id} className="bg-card border border-border rounded-md p-4">
                   <div className="text-sm space-y-1">
-                    <div className="font-mono text-xs text-muted-foreground">#{o.id.slice(0, 8)}</div>
+                    <div className="font-mono text-xs text-muted-foreground">#{String(o.id).slice(0, 8)}</div>
                     <div>Buyer: {o.buyers?.name ?? "—"}</div>
                     <div>Farmer: {o.farmers?.name ?? "—"}</div>
                     <div>Crop: {o.listings?.crop_type ?? "—"}</div>
