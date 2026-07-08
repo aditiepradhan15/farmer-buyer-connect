@@ -94,7 +94,7 @@ function statusClass(status: string) {
   }
 }
 
-function Panel() {
+function Panel({ onLogout }: { onLogout: () => void }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [disputed, setDisputed] = useState<DisputedRow[]>([]);
   const [recent, setRecent] = useState<RecentOrder[]>([]);
