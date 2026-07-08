@@ -163,6 +163,14 @@ function Panel({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
+        <div className="flex justify-end">
+          <button
+            onClick={onLogout}
+            className="bg-secondary text-secondary-foreground border border-border rounded-md px-4 py-2 text-sm font-medium hover:bg-accent"
+          >
+            Logout
+          </button>
+        </div>
         <section>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
