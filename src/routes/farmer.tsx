@@ -3,9 +3,18 @@ import { useEffect, useState } from "react";
 import { supabase, type Farmer, type Listing, type Order } from "@/lib/supabase";
 import { useLang, LanguageSwitcher } from "@/lib/i18n";
 import { OtpLogin } from "@/components/OtpLogin";
+import {
+  PhoneFrame,
+  TopBar,
+  BottomNav,
+  StatusPill,
+  cropEmoji,
+  TrustRing,
+} from "@/components/AppShell";
+import { Home, Package, Plus, ArrowLeft, LogOut, Star } from "lucide-react";
 
 export const Route = createFileRoute("/farmer")({
-  head: () => ({ meta: [{ title: "Farmer — AgriConnect" }] }),
+  head: () => ({ meta: [{ title: "Farmer — Mitti & Market" }] }),
   component: FarmerPage,
 });
 
@@ -64,12 +73,12 @@ function FarmerRegister({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 bg-card border border-border rounded-lg p-6">
+    <form onSubmit={submit} className="space-y-4 card-soft p-6">
       <div>
-        <h1 className="text-2xl font-semibold">{t("registerTitle")}</h1>
+        <h1 className="text-2xl font-extrabold">{t("registerTitle")}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t("registerHint")}</p>
         <p className="text-sm mt-2">
-          {t("otpSentTo")}: <span className="font-medium">{phone}</span>
+          {t("otpSentTo")}: <span className="font-semibold">{phone}</span>
         </p>
       </div>
       <input
@@ -77,27 +86,22 @@ function FarmerRegister({
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder={t("yourName")}
-        className="w-full px-3 py-2 border border-input rounded-md bg-background"
+        className="input-app"
       />
       <input
         required
         value={village}
         onChange={(e) => setVillage(e.target.value)}
         placeholder={t("villageLabel")}
-        className="w-full px-3 py-2 border border-input rounded-md bg-background"
+        className="input-app"
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <button
-        type="submit"
-        disabled={busy}
-        className="w-full bg-primary text-primary-foreground rounded-md py-2 font-medium hover:bg-primary/90 disabled:opacity-50"
-      >
+      <button type="submit" disabled={busy} className="btn-primary w-full">
         {busy ? t("registering") : t("registerBtn")}
       </button>
     </form>
   );
 }
-
 
 type OrderWithJoins = Order & {
   buyers: { name: string } | null;
@@ -107,12 +111,9 @@ type OrderWithJoins = Order & {
 
 function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () => void }) {
   const { t } = useLang();
+  const [tab, setTab] = useState<"home" | "orders" | "sell">("home");
   const [listings, setListings] = useState<Listing[]>([]);
   const [orders, setOrders] = useState<OrderWithJoins[]>([]);
-  const [crop, setCrop] = useState("");
-  const [qty, setQty] = useState("");
-  const [price, setPrice] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [trust, setTrust] = useState<number>(farmer.trust_score ?? 0);
 
   async function refresh() {
@@ -130,7 +131,6 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
     if (me.data) setTrust((me.data.trust_score as number | null) ?? 0);
   }
 
-
   useEffect(() => {
     refresh();
     const interval = setInterval(refresh, 5000);
@@ -138,144 +138,220 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [farmer.id]);
 
-  async function createListing(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    const { error } = await supabase.from("listings").insert({
-      farmer_id: farmer.id,
-      crop_type: crop,
-      quantity_kg: Number(qty),
-      price_per_kg: Number(price),
-      status: "active",
-    });
-    setSubmitting(false);
-    if (error) return alert(error.message);
-    setCrop("");
-    setQty("");
-    setPrice("");
-    refresh();
-  }
+  return (
+    <PhoneFrame>
+      {tab === "home" && (
+        <HomeTab
+          farmer={farmer}
+          trust={trust}
+          listings={listings}
+          orders={orders}
+          onOpenSell={() => setTab("sell")}
+          onOpenOrders={() => setTab("orders")}
+          onLogout={onLogout}
+        />
+      )}
+      {tab === "orders" && (
+        <OrdersTab orders={orders} onRefresh={refresh} onBack={() => setTab("home")} />
+      )}
+      {tab === "sell" && (
+        <SellTab farmer={farmer} onDone={() => { setTab("home"); refresh(); }} onBack={() => setTab("home")} />
+      )}
+
+      <BottomNav
+        active={tab}
+        onChange={(k) => setTab(k as typeof tab)}
+        tabs={[
+          { key: "home", label: "Home", icon: <Home className="h-5 w-5" /> },
+          { key: "orders", label: "Orders", icon: <Package className="h-5 w-5" /> },
+          { key: "sell", label: "Sell", icon: <Plus className="h-5 w-5" /> },
+        ]}
+      />
+    </PhoneFrame>
+  );
+}
+
+function HomeTab({
+  farmer,
+  trust,
+  listings,
+  orders,
+  onOpenSell,
+  onOpenOrders,
+  onLogout,
+}: {
+  farmer: Farmer;
+  trust: number;
+  listings: Listing[];
+  orders: OrderWithJoins[];
+  onOpenSell: () => void;
+  onOpenOrders: () => void;
+  onLogout: () => void;
+}) {
+  const { t } = useLang();
+  const active = listings.filter((l) => l.status === "active");
+  const recent = orders.slice(0, 2);
+  const stars = Math.round((trust / 100) * 5);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">
-              {t("welcome")}, {farmer.name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {farmer.village} · {t("trustScore")}: {trust}
-            </p>
-
+    <>
+      <TopBar
+        right={
+          <button
+            onClick={onLogout}
+            aria-label="Logout"
+            className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
+        }
+      />
+      <div className="px-5 space-y-5">
+        {/* welcome banner */}
+        <div className="rounded-3xl p-5 text-white bg-gradient-to-br from-primary to-emerald-700 shadow-md">
+          <div className="text-lg font-bold">
+            नमस्ते, {farmer.name}! 🌾
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <button onClick={onLogout} className="text-sm text-muted-foreground hover:underline">
-              {t("logout")}
-            </button>
-            <LanguageSwitcher />
+          <div className="text-sm text-white/85 mt-1">
+            📍 {farmer.village}
           </div>
         </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-        <section className="bg-card border border-border rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">{t("createListing")}</h2>
-          <form onSubmit={createListing} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <input
-              required
-              value={crop}
-              onChange={(e) => setCrop(e.target.value)}
-              placeholder={t("cropType")}
-              className="px-3 py-2 border border-input rounded-md bg-background"
-            />
-            <input
-              required
-              type="number"
-              min="1"
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              placeholder={t("quantityKg")}
-              className="px-3 py-2 border border-input rounded-md bg-background"
-            />
-            <input
-              required
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder={t("pricePerKg")}
-              className="px-3 py-2 border border-input rounded-md bg-background"
-            />
-            <button
-              type="submit"
-              disabled={submitting}
-              className="bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
-            >
-              {submitting ? t("adding") : t("addListing")}
-            </button>
-          </form>
-        </section>
+        {/* Trust score */}
+        <div className="card-soft p-5 flex items-center gap-4">
+          <TrustRing score={trust} />
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+              {t("trustScore")}
+            </div>
+            <div className="mt-1 flex items-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className={`h-4 w-4 ${
+                    i < stars ? "fill-yellow-400 text-yellow-400" : "text-border"
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {trust >= 80 ? "Trusted farmer" : trust >= 40 ? "Growing reputation" : "New farmer"}
+            </div>
+          </div>
+        </div>
 
+        {/* Listings */}
         <section>
-          <h2 className="text-lg font-semibold mb-3">{t("myListings")}</h2>
-          {listings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("noListings")}</p>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-bold">Your Active Listings</h2>
+            <button onClick={onOpenSell} className="text-xs font-semibold text-primary">
+              See all →
+            </button>
+          </div>
+          {active.length === 0 ? (
+            <button
+              onClick={onOpenSell}
+              className="w-full card-soft p-6 text-center border border-dashed border-primary/40"
+            >
+              <div className="text-4xl">🌱</div>
+              <div className="mt-2 text-sm font-semibold">No active listings</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Tap + Sell to create one!
+              </div>
+            </button>
           ) : (
-            <div className="space-y-2">
-              {listings.map((l) => (
+            <div className="-mx-5 px-5 flex gap-3 overflow-x-auto pb-1 snap-x">
+              {active.map((l) => (
                 <div
                   key={l.id}
-                  className="bg-card border border-border rounded-md p-4 flex justify-between"
+                  className="min-w-[180px] snap-start card-soft p-4"
                 >
-                  <div>
-                    <div className="font-medium">{l.crop_type}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {l.quantity_kg} kg @ ₹{l.price_per_kg}/kg
-                    </div>
+                  <div className="text-3xl">{cropEmoji(l.crop_type)}</div>
+                  <div className="mt-2 font-bold">{l.crop_type}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {l.quantity_kg} kg
                   </div>
-                  <span className="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground self-start">
-                    {l.status}
-                  </span>
+                  <div className="mt-1 text-primary font-extrabold">
+                    ₹{l.price_per_kg}/kg
+                  </div>
+                  <StatusPill status={l.status === "active" ? "confirmed" : "delivered"} />
                 </div>
               ))}
             </div>
           )}
         </section>
 
+        {/* Recent orders */}
         <section>
-          <h2 className="text-lg font-semibold mb-3">{t("yourOrders")}</h2>
-          {orders.length === 0 ? (
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-bold">Recent Orders</h2>
+            <button onClick={onOpenOrders} className="text-xs font-semibold text-primary">
+              See all →
+            </button>
+          </div>
+          {recent.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noOrders")}</p>
           ) : (
             <div className="space-y-2">
-              {orders.map((o) => (
-                <OrderCard key={o.id} order={o} onChanged={refresh} />
+              {recent.map((o) => (
+                <div key={o.id} className="card-soft p-4 flex items-center gap-3">
+                  <div className="text-2xl">{cropEmoji(o.listings?.crop_type ?? "")}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold truncate">
+                      {o.listings?.crop_type ?? "—"} · {o.quantity_kg}kg
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {t("buyer")}: {o.buyers?.name ?? "—"} · ₹{o.total_price}
+                    </div>
+                  </div>
+                  <StatusPill status={o.status} />
+                </div>
               ))}
             </div>
           )}
         </section>
-      </main>
-    </div>
+
+        <div className="flex justify-center pt-2">
+          <LanguageSwitcher />
+        </div>
+      </div>
+    </>
   );
 }
 
-function statusClass(status: string) {
-  switch (status) {
-    case "placed":
-      return "bg-yellow-100 text-yellow-900";
-    case "confirmed":
-      return "bg-blue-100 text-blue-900";
-    case "delivered":
-      return "bg-green-100 text-green-900";
-    case "cancelled":
-      return "bg-red-100 text-red-900";
-    case "disputed":
-      return "bg-orange-100 text-orange-900";
-    default:
-      return "bg-secondary text-secondary-foreground";
-  }
+function OrdersTab({
+  orders,
+  onRefresh,
+  onBack,
+}: {
+  orders: OrderWithJoins[];
+  onRefresh: () => void;
+  onBack: () => void;
+}) {
+  const { t } = useLang();
+  return (
+    <>
+      <div className="flex items-center gap-3 px-5 pt-5 pb-3">
+        <button
+          onClick={onBack}
+          className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-extrabold">{t("yourOrders")}</h1>
+      </div>
+      <div className="px-5 space-y-2">
+        {orders.length === 0 ? (
+          <div className="card-soft p-8 text-center">
+            <div className="text-4xl">📦</div>
+            <p className="mt-2 text-sm text-muted-foreground">{t("noOrders")}</p>
+          </div>
+        ) : (
+          orders.map((o) => <OrderCard key={o.id} order={o} onChanged={onRefresh} />)
+        )}
+      </div>
+    </>
+  );
 }
 
 function OrderCard({ order, onChanged }: { order: OrderWithJoins; onChanged: () => void }) {
@@ -304,55 +380,271 @@ function OrderCard({ order, onChanged }: { order: OrderWithJoins; onChanged: () 
   }
 
   return (
-    <div className="bg-card border border-border rounded-md p-4 flex flex-col sm:flex-row sm:justify-between gap-3">
-      <div>
-        <div className="font-medium">
-          {order.listings?.crop_type ?? "—"} · {order.quantity_kg} kg
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {t("buyer")}: {order.buyers?.name ?? "—"} · {t("total")}: ₹{order.total_price}
-        </div>
-        {order.drivers && (
-          <div className="text-sm text-muted-foreground">
-            🚚 {t("driver")}: {order.drivers.name} · {t("vehicle")}: {order.drivers.vehicle_reg_number}
+    <div className="card-soft p-4">
+      <div className="flex items-start gap-3">
+        <div className="text-3xl">{cropEmoji(order.listings?.crop_type ?? "")}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="font-bold truncate">
+              {order.listings?.crop_type ?? "—"}
+            </div>
+            <StatusPill status={order.status} />
           </div>
-        )}
-        <div className="mt-1 text-sm">
-          {t("status")}:{" "}
-          <span className={`text-xs px-2 py-0.5 rounded font-medium ${statusClass(order.status)}`}>
-            {order.status}
-          </span>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            {order.quantity_kg}kg · ₹{order.total_price}
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5 truncate">
+            {t("buyer")}: {order.buyers?.name ?? "—"}
+          </div>
+          {order.drivers && (
+            <div className="text-xs text-muted-foreground mt-0.5 truncate">
+              🚚 {order.drivers.name} · {order.drivers.vehicle_reg_number}
+            </div>
+          )}
         </div>
       </div>
-      <div className="flex flex-wrap gap-2 sm:self-center">
-        {order.status === "placed" && (
-          <>
-            <button
-              onClick={() => setStatus("confirmed")}
-              disabled={busy}
-              className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {t("acceptOrder")}
-            </button>
-            <button
-              onClick={() => setStatus("cancelled")}
-              disabled={busy}
-              className="text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent disabled:opacity-50"
-            >
-              {t("declineOrder")}
-            </button>
-          </>
-        )}
-        {order.status === "confirmed" && (
+      {order.status === "placed" && (
+        <div className="flex gap-2 mt-3">
           <button
-            onClick={() => setStatus("delivered")}
+            onClick={() => setStatus("confirmed")}
             disabled={busy}
-            className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="btn-primary flex-1 py-2 text-sm"
           >
-            {t("markDelivered")}
+            {t("acceptOrder")}
           </button>
-        )}
-      </div>
+          <button
+            onClick={() => setStatus("cancelled")}
+            disabled={busy}
+            className="flex-1 py-2 rounded-full border border-border text-sm font-semibold text-foreground"
+          >
+            {t("declineOrder")}
+          </button>
+        </div>
+      )}
+      {order.status === "confirmed" && (
+        <button
+          onClick={() => setStatus("delivered")}
+          disabled={busy}
+          className="btn-primary w-full mt-3 py-2 text-sm"
+        >
+          {t("markDelivered")}
+        </button>
+      )}
     </div>
+  );
+}
+
+const CROP_OPTIONS = [
+  { name: "Onion", emoji: "🧅" },
+  { name: "Tomato", emoji: "🍅" },
+  { name: "Wheat", emoji: "🌾" },
+  { name: "Rice", emoji: "🍚" },
+  { name: "Potato", emoji: "🥔" },
+  { name: "Leafy Greens", emoji: "🥬" },
+  { name: "Corn", emoji: "🌽" },
+  { name: "Mango", emoji: "🥭" },
+  { name: "Grapes", emoji: "🍇" },
+  { name: "Garlic", emoji: "🧄" },
+  { name: "Soybean", emoji: "🫘" },
+];
+
+function suggestedRange(crop: string): [number, number] | null {
+  const c = crop.toLowerCase();
+  if (c.includes("onion")) return [18, 28];
+  if (c.includes("tomato")) return [15, 25];
+  if (c.includes("wheat")) return [22, 32];
+  if (c.includes("rice")) return [28, 45];
+  if (c.includes("potato")) return [12, 20];
+  if (c.includes("leaf") || c.includes("green")) return [20, 35];
+  if (c.includes("corn")) return [18, 26];
+  if (c.includes("mango")) return [50, 90];
+  if (c.includes("grape")) return [45, 75];
+  if (c.includes("garlic")) return [90, 140];
+  if (c.includes("soy")) return [35, 50];
+  return null;
+}
+
+function SellTab({
+  farmer,
+  onDone,
+  onBack,
+}: {
+  farmer: Farmer;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  const { t } = useLang();
+  const [crop, setCrop] = useState("");
+  const [otherCrop, setOtherCrop] = useState("");
+  const [qty, setQty] = useState("");
+  const [price, setPrice] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const finalCrop = crop === "__other" ? otherCrop.trim() : crop;
+  const range = suggestedRange(finalCrop);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!finalCrop) return;
+    setSubmitting(true);
+    const { error } = await supabase.from("listings").insert({
+      farmer_id: farmer.id,
+      crop_type: finalCrop,
+      quantity_kg: Number(qty),
+      price_per_kg: Number(price),
+      status: "active",
+    });
+    setSubmitting(false);
+    if (error) return alert(error.message);
+    onDone();
+  }
+
+  function onPhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPhotos((p) => [...p, ...urls]);
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-3 px-5 pt-5 pb-3">
+        <button
+          onClick={onBack}
+          className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-extrabold">New Listing</h1>
+      </div>
+
+      <form onSubmit={submit} className="px-5 space-y-5">
+        {/* Step 1: crop */}
+        <div>
+          <div className="text-xs font-bold text-muted-foreground uppercase mb-2">
+            1. Choose crop
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {CROP_OPTIONS.map((c) => {
+              const active = crop === c.name;
+              return (
+                <button
+                  type="button"
+                  key={c.name}
+                  onClick={() => setCrop(c.name)}
+                  className={`card-soft p-3 flex flex-col items-center gap-1 border ${
+                    active ? "border-primary ring-2 ring-primary/30" : "border-transparent"
+                  }`}
+                >
+                  <span className="text-2xl">{c.emoji}</span>
+                  <span className="text-[11px] font-semibold text-center leading-tight">
+                    {c.name}
+                  </span>
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setCrop("__other")}
+              className={`card-soft p-3 flex flex-col items-center gap-1 border ${
+                crop === "__other"
+                  ? "border-primary ring-2 ring-primary/30"
+                  : "border-transparent"
+              }`}
+            >
+              <span className="text-2xl">➕</span>
+              <span className="text-[11px] font-semibold">Other</span>
+            </button>
+          </div>
+          {crop === "__other" && (
+            <input
+              className="input-app mt-2"
+              placeholder={t("cropType")}
+              value={otherCrop}
+              onChange={(e) => setOtherCrop(e.target.value)}
+              required
+            />
+          )}
+        </div>
+
+        {/* Step 2: quantity */}
+        <div>
+          <div className="text-xs font-bold text-muted-foreground uppercase mb-2">
+            2. {t("quantityKg")}
+          </div>
+          <input
+            required
+            type="number"
+            inputMode="numeric"
+            min="1"
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            placeholder="0"
+            className="input-app text-2xl font-bold text-center tracking-wide"
+          />
+        </div>
+
+        {/* Step 3: price */}
+        <div>
+          <div className="text-xs font-bold text-muted-foreground uppercase mb-2">
+            3. {t("pricePerKg")}
+          </div>
+          {range && (
+            <div className="rounded-xl bg-primary-soft border border-primary/20 px-4 py-2.5 text-sm text-primary font-semibold mb-2">
+              Suggested: ₹{range[0]}–₹{range[1]}/kg
+            </div>
+          )}
+          <input
+            required
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="₹/kg"
+            className="input-app text-xl font-bold text-center"
+          />
+        </div>
+
+        {/* Step 4: photos */}
+        <div>
+          <div className="text-xs font-bold text-muted-foreground uppercase mb-2">
+            4. Photos (optional)
+          </div>
+          <label className="block card-soft border-2 border-dashed border-border p-4 text-center cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={onPhotoPick}
+            />
+            <div className="text-2xl">📸</div>
+            <div className="text-sm font-semibold mt-1">Add Photos</div>
+          </label>
+          {photos.length > 0 && (
+            <div className="flex gap-2 mt-2 overflow-x-auto">
+              {photos.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt=""
+                  className="h-16 w-16 rounded-xl object-cover border border-border"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={submitting || !finalCrop || !qty || !price}
+          className="btn-primary w-full text-base"
+        >
+          {submitting ? t("adding") : "Publish Listing"}
+        </button>
+      </form>
+    </>
   );
 }
