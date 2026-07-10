@@ -1,20 +1,15 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase, normalizePhone } from "@/lib/supabase";
 import { useLang, LanguageSwitcher } from "@/lib/i18n";
+import { PhoneFrame } from "@/components/AppShell";
+import { ArrowLeft, Leaf } from "lucide-react";
 
 export type VerifiedResult = "ok" | "register" | string;
 
 type Props = {
   title: string;
-  /**
-   * Called with the verified (normalized) phone. Return:
-   *  - "ok" if the user was found and logged in
-   *  - "register" to switch into the registration form
-   *  - any other string to display as an error
-   */
   onVerified: (phone: string) => Promise<VerifiedResult>;
-  /** Renders the role-specific registration form when the phone isn't yet registered. */
   renderRegister?: (phone: string) => ReactNode;
 };
 
@@ -22,9 +17,12 @@ export function OtpLogin({ title, onVerified, renderRegister }: Props) {
   const { t } = useLang();
   const [step, setStep] = useState<"phone" | "otp" | "register">("phone");
   const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
+  const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const refs = useRef<Array<HTMLInputElement | null>>([]);
+
+  const code = digits.join("");
 
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -37,8 +35,9 @@ export function OtpLogin({ title, onVerified, renderRegister }: Props) {
     });
     setLoading(false);
     if (fnError) return setError(fnError.message || t("otpSendFailed"));
-    setCode("");
+    setDigits(["", "", "", "", "", ""]);
     setStep("otp");
+    setTimeout(() => refs.current[0]?.focus(), 50);
   }
 
   async function verifyOtp(e: React.FormEvent) {
@@ -64,92 +63,143 @@ export function OtpLogin({ title, onVerified, renderRegister }: Props) {
     setError(result);
   }
 
+  function setDigit(i: number, v: string) {
+    const clean = v.replace(/\D/g, "").slice(-1);
+    setDigits((d) => {
+      const next = [...d];
+      next[i] = clean;
+      return next;
+    });
+    if (clean && i < 5) refs.current[i + 1]?.focus();
+  }
+
+  function onKeyDown(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !digits[i] && i > 0) {
+      refs.current[i - 1]?.focus();
+    }
+  }
+
   if (step === "register" && renderRegister) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4 relative">
-        <div className="absolute top-4 right-4">
-          <LanguageSwitcher />
+      <PhoneFrame>
+        <div className="px-5 pt-6 pb-10">
+          <div className="flex items-center justify-between">
+            <Link to="/" className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <LanguageSwitcher />
+          </div>
+          <div className="mt-6">{renderRegister(normalizePhone(phone))}</div>
         </div>
-        <div className="w-full max-w-sm">{renderRegister(normalizePhone(phone))}</div>
-      </div>
+      </PhoneFrame>
     );
   }
 
+  // Show digits without +91 prefix for display in the input.
+  const phoneDigits = phone.startsWith("+91") ? phone.slice(3) : phone;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative">
-      <div className="absolute top-4 right-4">
-        <LanguageSwitcher />
-      </div>
-      <form
-        onSubmit={step === "phone" ? sendOtp : verifyOtp}
-        className="w-full max-w-sm space-y-4 bg-card border border-border rounded-lg p-6"
-      >
-        <div>
-          <Link to="/" className="text-sm text-muted-foreground hover:underline">
-            ← {t("back")}
+    <PhoneFrame>
+      <div className="px-5 pt-6 pb-10">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm">
+            <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-2xl font-semibold mt-2">{title}</h1>
-          <p className="text-sm text-muted-foreground">
+          <LanguageSwitcher />
+        </div>
+
+        <div className="mt-6 text-center">
+          <div className="mx-auto grid place-items-center h-14 w-14 rounded-2xl bg-primary-soft text-primary">
+            <Leaf className="h-7 w-7" />
+          </div>
+          <h1 className="mt-3 text-2xl font-extrabold tracking-tight">{title}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {step === "phone" ? t("enterPhone") : t("enterOtp")}
           </p>
         </div>
 
-        {step === "phone" ? (
-          <input
-            type="tel"
-            required
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder={t("phonePlaceholder")}
-            className="w-full px-3 py-2 border border-input rounded-md bg-background"
-          />
-        ) : (
-          <>
-            <div className="text-sm text-muted-foreground">
-              {t("otpSentTo")}: <span className="font-medium text-foreground">{phone}</span>
-            </div>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder={t("codePlaceholder")}
-              className="w-full px-3 py-2 border border-input rounded-md bg-background tracking-widest text-center text-lg"
-            />
-          </>
-        )}
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-primary text-primary-foreground rounded-md py-2 font-medium hover:bg-primary/90 disabled:opacity-50"
+        <form
+          onSubmit={step === "phone" ? sendOtp : verifyOtp}
+          className="mt-8 card-soft p-5 space-y-4"
         >
-          {loading
-            ? "..."
-            : step === "phone"
-              ? t("sendOtp")
-              : t("verifyOtp")}
-        </button>
+          {step === "phone" ? (
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-2">
+                {t("phonePlaceholder")}
+              </label>
+              <div className="flex items-stretch gap-2">
+                <div className="grid place-items-center px-3 rounded-xl bg-primary-soft text-primary font-bold">
+                  +91
+                </div>
+                <input
+                  type="tel"
+                  required
+                  value={phoneDigits}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="98765 43210"
+                  className="input-app flex-1 tracking-wider"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="text-xs text-muted-foreground text-center mb-3">
+                {t("otpSentTo")}:{" "}
+                <span className="font-semibold text-foreground">{phone}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                {digits.map((d, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => {
+                      refs.current[i] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={1}
+                    value={d}
+                    onChange={(e) => setDigit(i, e.target.value)}
+                    onKeyDown={(e) => onKeyDown(i, e)}
+                    className="w-11 h-14 text-center text-2xl font-bold rounded-xl border border-input bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
-        {step === "otp" && (
+          {error && (
+            <p className="text-sm text-destructive text-center">{error}</p>
+          )}
+
           <button
-            type="button"
-            onClick={() => {
-              setStep("phone");
-              setError("");
-              setCode("");
-            }}
-            className="w-full text-sm text-muted-foreground hover:underline"
+            type="submit"
+            disabled={loading || (step === "otp" && code.length < 6)}
+            className="btn-primary w-full"
           >
-            ← {t("changePhone")}
+            {loading
+              ? "..."
+              : step === "phone"
+                ? t("sendOtp")
+                : t("verifyOtp")}
           </button>
-        )}
-      </form>
-    </div>
+
+          {step === "otp" && (
+            <button
+              type="button"
+              onClick={() => {
+                setStep("phone");
+                setError("");
+                setDigits(["", "", "", "", "", ""]);
+              }}
+              className="w-full text-sm text-muted-foreground py-1"
+            >
+              ← {t("changePhone")}
+            </button>
+          )}
+        </form>
+      </div>
+    </PhoneFrame>
   );
 }
