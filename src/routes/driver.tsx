@@ -1,11 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase, type Driver, type Order } from "@/lib/supabase";
 import { useLang, LanguageSwitcher } from "@/lib/i18n";
 import { OtpLogin } from "@/components/OtpLogin";
+import {
+  PhoneFrame,
+  TopBar,
+  BottomNav,
+  StatusPill,
+  cropEmoji,
+} from "@/components/AppShell";
+import { Home, Wallet, User, LogOut, Star } from "lucide-react";
 
 export const Route = createFileRoute("/driver")({
-  head: () => ({ meta: [{ title: "Driver — AgriConnect" }] }),
+  head: () => ({ meta: [{ title: "Driver — Mitti & Market" }] }),
   component: DriverPage,
 });
 
@@ -70,47 +78,24 @@ function DriverRegister({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 bg-card border border-border rounded-lg p-6">
+    <form onSubmit={submit} className="space-y-4 card-soft p-6">
       <div>
-        <h1 className="text-2xl font-semibold">{t("registerTitle")}</h1>
+        <h1 className="text-2xl font-extrabold">{t("registerTitle")}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t("registerHint")}</p>
         <p className="text-sm mt-2">
-          {t("otpSentTo")}: <span className="font-medium">{phone}</span>
+          {t("otpSentTo")}: <span className="font-semibold">{phone}</span>
         </p>
       </div>
-      <input
-        required
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder={t("yourName")}
-        className="w-full px-3 py-2 border border-input rounded-md bg-background"
-      />
-      <input
-        required
-        value={vehicleType}
-        onChange={(e) => setVehicleType(e.target.value)}
-        placeholder={t("vehicleType")}
-        className="w-full px-3 py-2 border border-input rounded-md bg-background"
-      />
-      <input
-        required
-        value={vehicleReg}
-        onChange={(e) => setVehicleReg(e.target.value)}
-        placeholder={t("vehicleReg")}
-        className="w-full px-3 py-2 border border-input rounded-md bg-background"
-      />
+      <input required value={name} onChange={(e) => setName(e.target.value)} placeholder={t("yourName")} className="input-app" />
+      <input required value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} placeholder={t("vehicleType")} className="input-app" />
+      <input required value={vehicleReg} onChange={(e) => setVehicleReg(e.target.value)} placeholder={t("vehicleReg")} className="input-app" />
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <button
-        type="submit"
-        disabled={busy}
-        className="w-full bg-primary text-primary-foreground rounded-md py-2 font-medium hover:bg-primary/90 disabled:opacity-50"
-      >
+      <button type="submit" disabled={busy} className="btn-primary w-full">
         {busy ? t("registering") : t("registerBtn")}
       </button>
     </form>
   );
 }
-
 
 type PickupOrder = Order & {
   listings: { crop_type: string } | null;
@@ -118,25 +103,9 @@ type PickupOrder = Order & {
   buyers: { name: string } | null;
 };
 
-function statusClass(status: string) {
-  switch (status) {
-    case "placed":
-      return "bg-yellow-100 text-yellow-900";
-    case "confirmed":
-      return "bg-blue-100 text-blue-900";
-    case "delivered":
-      return "bg-green-100 text-green-900";
-    case "cancelled":
-      return "bg-red-100 text-red-900";
-    case "disputed":
-      return "bg-orange-100 text-orange-900";
-    default:
-      return "bg-secondary text-secondary-foreground";
-  }
-}
-
 function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () => void }) {
   const { t } = useLang();
+  const [tab, setTab] = useState<"home" | "earnings" | "profile">("home");
   const [available, setAvailable] = useState<PickupOrder[]>([]);
   const [mine, setMine] = useState<PickupOrder[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -162,7 +131,6 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
     if (me.data) setTrust((me.data.trust_score as number | null) ?? 0);
   }
 
-
   useEffect(() => {
     refresh();
     const interval = setInterval(refresh, 5000);
@@ -181,10 +149,8 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
     refresh();
   }
 
-
   async function startDelivery(order: PickupOrder) {
     if (order.delivery_otp) {
-      // OTP already generated; just refresh display
       refresh();
       return;
     }
@@ -199,107 +165,188 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
     refresh();
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">
-              {t("welcome")}, {driver.name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {driver.vehicle_type} · {driver.vehicle_reg_number} · {t("trustScore")}: {trust}
-            </p>
+  const earnings = useMemo(
+    () =>
+      mine
+        .filter((o) => o.status === "delivered")
+        .reduce((sum, o) => sum + Math.round(Number(o.total_price) * 0.1), 0),
+    [mine],
+  );
 
+  return (
+    <PhoneFrame>
+      {tab === "home" && (
+        <HomeTab
+          driver={driver}
+          trust={trust}
+          available={available}
+          mine={mine}
+          busy={busy}
+          onAccept={acceptPickup}
+          onStart={startDelivery}
+          onLogout={onLogout}
+        />
+      )}
+      {tab === "earnings" && (
+        <EarningsTab mine={mine} totalEarnings={earnings} />
+      )}
+      {tab === "profile" && (
+        <ProfileTab driver={driver} trust={trust} onLogout={onLogout} />
+      )}
+
+      <BottomNav
+        active={tab}
+        onChange={(k) => setTab(k as typeof tab)}
+        tabs={[
+          { key: "home", label: "Home", icon: <Home className="h-5 w-5" /> },
+          { key: "earnings", label: "Earnings", icon: <Wallet className="h-5 w-5" /> },
+          { key: "profile", label: "Profile", icon: <User className="h-5 w-5" /> },
+        ]}
+      />
+    </PhoneFrame>
+  );
+}
+
+function HomeTab({
+  driver,
+  trust,
+  available,
+  mine,
+  busy,
+  onAccept,
+  onStart,
+  onLogout,
+}: {
+  driver: Driver;
+  trust: number;
+  available: PickupOrder[];
+  mine: PickupOrder[];
+  busy: string | null;
+  onAccept: (id: string) => void;
+  onStart: (o: PickupOrder) => void;
+  onLogout: () => void;
+}) {
+  const { t } = useLang();
+  const active = mine.filter((o) => o.status !== "delivered" && o.status !== "cancelled");
+  return (
+    <>
+      <TopBar
+        right={
+          <button
+            onClick={onLogout}
+            aria-label="Logout"
+            className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
+        }
+      />
+      <div className="px-5 space-y-4">
+        {/* welcome */}
+        <div className="rounded-3xl p-5 text-white bg-gradient-to-br from-primary to-emerald-700 shadow-md">
+          <div className="text-lg font-bold">नमस्ते, {driver.name}! 🚚</div>
+          <div className="text-sm text-white/85 mt-1">
+            {driver.vehicle_type} · {driver.vehicle_reg_number}
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <button onClick={onLogout} className="text-sm text-muted-foreground hover:underline">
-              {t("logout")}
-            </button>
-            <LanguageSwitcher />
+          <div className="mt-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/20 text-xs font-bold">
+            ⭐ {t("trustScore")}: {trust}
           </div>
         </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8 space-y-10">
+        {/* Available pickups */}
         <section>
-          <h2 className="text-lg font-semibold mb-4">{t("availablePickups")}</h2>
+          <h2 className="text-base font-bold mb-2">{t("availablePickups")}</h2>
           {available.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("noAvailablePickups")}</p>
+            <div className="card-soft p-6 text-center">
+              <div className="text-3xl">🕓</div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {t("noAvailablePickups")}
+              </p>
+            </div>
           ) : (
             <div className="space-y-2">
-              {available.map((o) => (
-                <div
-                  key={o.id}
-                  className="bg-card border border-border rounded-md p-4 flex flex-col sm:flex-row sm:justify-between gap-3"
-                >
-                  <div className="text-sm">
-                    <div className="font-medium text-base">
-                      {o.listings?.crop_type ?? "—"} · {o.quantity_kg} kg
+              {available.map((o) => {
+                const fee = Math.round(Number(o.total_price) * 0.1);
+                return (
+                  <div key={o.id} className="card-soft p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-3xl">{cropEmoji(o.listings?.crop_type ?? "")}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold truncate">
+                          {o.listings?.crop_type ?? "—"} · {o.quantity_kg}kg
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          📍 {o.farmers?.village ?? "—"} → {o.buyers?.name ?? "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {t("farmer")}: {o.farmers?.name ?? "—"}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">
+                          Earn
+                        </div>
+                        <div className="text-primary font-extrabold">₹{fee}</div>
+                      </div>
                     </div>
-                    <div className="text-muted-foreground">
-                      {t("farmer")}: {o.farmers?.name ?? "—"} · {t("village")}: {o.farmers?.village ?? "—"}
-                    </div>
-                    <div className="text-muted-foreground">
-                      {t("buyer")}: {o.buyers?.name ?? "—"}
-                    </div>
+                    <button
+                      onClick={() => onAccept(o.id)}
+                      disabled={busy === o.id}
+                      className="btn-primary w-full mt-3 py-2 text-sm"
+                    >
+                      {busy === o.id ? "..." : t("acceptPickup")}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => acceptPickup(o.id)}
-                    disabled={busy === o.id}
-                    className="sm:self-center bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    {busy === o.id ? "..." : t("acceptPickup")}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
 
+        {/* Active deliveries */}
         <section>
-          <h2 className="text-lg font-semibold mb-4">{t("myDeliveries")}</h2>
-          {mine.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("noDeliveries")}</p>
+          <h2 className="text-base font-bold mb-2">{t("myDeliveries")}</h2>
+          {active.length === 0 ? (
+            <div className="card-soft p-6 text-center text-sm text-muted-foreground">
+              {t("noDeliveries")}
+            </div>
           ) : (
             <div className="space-y-2">
-              {mine.map((o) => (
-                <div
-                  key={o.id}
-                  className="bg-card border border-border rounded-md p-4 flex flex-col sm:flex-row sm:justify-between gap-3"
-                >
-                  <div className="text-sm">
-                    <div className="font-medium text-base">
-                      {o.listings?.crop_type ?? "—"} · {o.quantity_kg} kg
-                    </div>
-                    <div className="text-muted-foreground">
-                      {t("farmer")}: {o.farmers?.name ?? "—"} · {t("village")}: {o.farmers?.village ?? "—"}
-                    </div>
-                    <div className="text-muted-foreground">
-                      {t("buyer")}: {o.buyers?.name ?? "—"}
-                    </div>
-                    <div className="mt-1">
-                      {t("status")}:{" "}
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded font-medium ${statusClass(o.status)}`}
-                      >
-                        {o.status}
-                      </span>
+              {active.map((o) => (
+                <div key={o.id} className="card-soft p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-3xl">{cropEmoji(o.listings?.crop_type ?? "")}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-bold truncate">
+                          {o.listings?.crop_type ?? "—"} · {o.quantity_kg}kg
+                        </div>
+                        <StatusPill status={o.status} />
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {t("farmer")}: {o.farmers?.name ?? "—"} · {o.farmers?.village ?? "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {t("buyer")}: {o.buyers?.name ?? "—"}
+                      </div>
                     </div>
                   </div>
+
                   {o.status === "confirmed" && !o.delivery_otp && (
                     <button
-                      onClick={() => startDelivery(o)}
+                      onClick={() => onStart(o)}
                       disabled={busy === o.id}
-                      className="sm:self-center bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+                      className="btn-primary w-full mt-3 py-2 text-sm"
                     >
                       {busy === o.id ? "..." : t("startDelivery")}
                     </button>
                   )}
                   {o.status === "confirmed" && o.delivery_otp && (
-                    <div className="sm:self-center bg-yellow-50 border border-yellow-300 rounded-md px-4 py-3 text-center">
-                      <div className="text-xs text-yellow-900 mb-1">{t("giveCodeToBuyer")}</div>
-                      <div className="text-3xl font-bold tracking-widest text-yellow-900">
+                    <div className="mt-3 rounded-2xl bg-yellow-50 border border-yellow-300 p-3 text-center">
+                      <div className="text-[11px] font-semibold text-yellow-900">
+                        {t("giveCodeToBuyer")}
+                      </div>
+                      <div className="mt-1 text-3xl font-extrabold tracking-widest text-yellow-900">
                         {o.delivery_otp}
                       </div>
                     </div>
@@ -309,7 +356,131 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
             </div>
           )}
         </section>
-      </main>
-    </div>
+
+        <div className="flex justify-center pt-2">
+          <LanguageSwitcher />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function EarningsTab({
+  mine,
+  totalEarnings,
+}: {
+  mine: PickupOrder[];
+  totalEarnings: number;
+}) {
+  const delivered = mine.filter((o) => o.status === "delivered");
+  return (
+    <>
+      <TopBar title="Earnings" />
+      <div className="px-5 space-y-4">
+        <div className="rounded-3xl p-6 text-white bg-gradient-to-br from-primary to-emerald-700 shadow-md text-center">
+          <div className="text-xs font-semibold text-white/80 uppercase">
+            Total earned
+          </div>
+          <div className="mt-1 text-4xl font-extrabold">₹{totalEarnings}</div>
+          <div className="mt-1 text-sm text-white/85">
+            {delivered.length} deliveries completed
+          </div>
+        </div>
+
+        <h2 className="text-base font-bold">Delivery history</h2>
+        {delivered.length === 0 ? (
+          <div className="card-soft p-6 text-center text-sm text-muted-foreground">
+            No completed deliveries yet.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {delivered.map((o) => (
+              <div key={o.id} className="card-soft p-4 flex items-center gap-3">
+                <div className="text-2xl">{cropEmoji(o.listings?.crop_type ?? "")}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold truncate">
+                    {o.listings?.crop_type ?? "—"} · {o.quantity_kg}kg
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {o.buyers?.name ?? "—"}
+                  </div>
+                </div>
+                <div className="text-primary font-extrabold">
+                  +₹{Math.round(Number(o.total_price) * 0.1)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ProfileTab({
+  driver,
+  trust,
+  onLogout,
+}: {
+  driver: Driver;
+  trust: number;
+  onLogout: () => void;
+}) {
+  const { t } = useLang();
+  const stars = Math.round((trust / 100) * 5);
+  return (
+    <>
+      <TopBar title="Profile" />
+      <div className="px-5 space-y-4">
+        <div className="card-soft p-6 text-center">
+          <div className="mx-auto grid place-items-center h-20 w-20 rounded-full bg-primary-soft text-3xl font-extrabold text-primary">
+            {driver.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="mt-3 text-2xl font-extrabold">{driver.name}</div>
+          <div className="mt-1 text-sm text-muted-foreground">
+            {driver.vehicle_type} · {driver.vehicle_reg_number}
+          </div>
+          <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary-soft text-primary text-xs font-bold">
+            ⭐ {t("trustScore")}: {trust}
+          </div>
+          <div className="mt-2 flex items-center justify-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star
+                key={i}
+                className={`h-4 w-4 ${
+                  i < stars ? "fill-yellow-400 text-yellow-400" : "text-border"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="card-soft p-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Phone</span>
+            <span className="font-semibold">{driver.phone}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Vehicle</span>
+            <span className="font-semibold">{driver.vehicle_type}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Reg. Number</span>
+            <span className="font-semibold">{driver.vehicle_reg_number}</span>
+          </div>
+        </div>
+
+        <button
+          onClick={onLogout}
+          className="w-full card-soft p-4 flex items-center justify-center gap-2 text-destructive font-semibold"
+        >
+          <LogOut className="h-4 w-4" /> {t("logout")}
+        </button>
+
+        <div className="flex justify-center pt-2">
+          <LanguageSwitcher />
+        </div>
+      </div>
+    </>
   );
 }
