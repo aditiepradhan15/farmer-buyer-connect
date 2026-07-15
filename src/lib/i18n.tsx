@@ -328,7 +328,7 @@ const translations: Record<Lang, Dict> = {
     noBuyer: "या फोन नंबरने कोणीही खरेदीदार सापडला नाही.",
     noDriver: "या फोन नंबरने कोणीही ड्रायव्हर सापडला नाही.",
     welcome: "स्वागत आहे",
-    logout: "बाहर जाओ",
+    logout: "बाहेर पडा",
     trustScore: "विश्वास गुण",
     createListing: "नवीन लिस्टिंग तयार करा",
     cropType: "पिकाचा प्रकार",
