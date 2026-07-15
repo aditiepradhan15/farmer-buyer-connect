@@ -190,13 +190,7 @@ export function TrustRing({ score, size = 84 }: { score: number; size?: number }
 }
 
 /** Horizontal 5-step order tracker. */
-const STEPS = [
-  { key: "placed", label: "Placed", icon: "🟡" },
-  { key: "confirmed", label: "Confirmed", icon: "🔵" },
-  { key: "driver", label: "Driver", icon: "🚚" },
-  { key: "transit", label: "In transit", icon: "📦" },
-  { key: "delivered", label: "Delivered", icon: "✅" },
-] as const;
+const STEP_KEYS = ["placed", "confirmed", "driver", "transit", "delivered"] as const;
 
 export function OrderTracker({
   status,
@@ -207,6 +201,14 @@ export function OrderTracker({
   hasDriver: boolean;
   hasOtp: boolean;
 }) {
+  const { t } = useLang();
+  const labels: Record<(typeof STEP_KEYS)[number], string> = {
+    placed: t("trackPlaced"),
+    confirmed: t("trackConfirmed"),
+    driver: t("trackDriver"),
+    transit: t("trackTransit"),
+    delivered: t("trackDelivered"),
+  };
   let stepIndex = 0;
   if (status === "placed") stepIndex = 0;
   else if (status === "confirmed" && !hasDriver) stepIndex = 1;
@@ -214,6 +216,7 @@ export function OrderTracker({
   else if (status === "confirmed" && hasDriver && hasOtp) stepIndex = 3;
   else if (status === "delivered") stepIndex = 4;
   else if (status === "cancelled" || status === "disputed") stepIndex = -1;
+
 
   return (
     <div className="flex items-center gap-1 mt-3">
