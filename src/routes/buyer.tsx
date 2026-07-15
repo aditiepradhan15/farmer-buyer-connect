@@ -126,15 +126,12 @@ type BuyerOrder = Order & {
 
 const FILTERS = ["All", "Vegetables", "Fruits", "Grains", "Leafy"] as const;
 
-function filterLabel(f: (typeof FILTERS)[number], t: (k: never) => string): string {
-  const map: Record<string, string> = {
-    All: "filterAll",
-    Vegetables: "filterVegetables",
-    Fruits: "filterFruits",
-    Grains: "filterGrains",
-    Leafy: "filterLeafy",
-  };
-  return t((map[f] ?? "filterAll") as never);
+function filterLabel(f: (typeof FILTERS)[number], t: ReturnType<typeof useLang>["t"]): string {
+  if (f === "All") return t("filterAll");
+  if (f === "Vegetables") return t("filterVegetables");
+  if (f === "Fruits") return t("filterFruits");
+  if (f === "Grains") return t("filterGrains");
+  return t("filterLeafy");
 }
 
 function categoryOf(crop: string): (typeof FILTERS)[number] {
