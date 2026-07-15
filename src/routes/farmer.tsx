@@ -162,9 +162,9 @@ function FarmerDashboard({ farmer, onLogout }: { farmer: Farmer; onLogout: () =>
         active={tab}
         onChange={(k) => setTab(k as typeof tab)}
         tabs={[
-          { key: "home", label: "Home", icon: <Home className="h-5 w-5" /> },
-          { key: "orders", label: "Orders", icon: <Package className="h-5 w-5" /> },
-          { key: "sell", label: "Sell", icon: <Plus className="h-5 w-5" /> },
+          { key: "home", label: t("homeTab"), icon: <Home className="h-5 w-5" /> },
+          { key: "orders", label: t("ordersTab"), icon: <Package className="h-5 w-5" /> },
+          { key: "sell", label: t("sellTab"), icon: <Plus className="h-5 w-5" /> },
         ]}
       />
     </PhoneFrame>
@@ -199,7 +199,7 @@ function HomeTab({
         right={
           <button
             onClick={onLogout}
-            aria-label="Logout"
+            aria-label={t("logout")}
             className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm"
           >
             <LogOut className="h-5 w-5" />
@@ -210,7 +210,7 @@ function HomeTab({
         {/* welcome banner */}
         <div className="rounded-3xl p-5 text-white bg-gradient-to-br from-primary to-emerald-700 shadow-md">
           <div className="text-lg font-bold">
-            नमस्ते, {farmer.name}! 🌾
+            {t("greeting")}, {farmer.name}! 🌾
           </div>
           <div className="text-sm text-white/85 mt-1">
             📍 {farmer.village}
@@ -235,7 +235,7 @@ function HomeTab({
               ))}
             </div>
             <div className="mt-1 text-xs text-muted-foreground">
-              {trust >= 80 ? "Trusted farmer" : trust >= 40 ? "Growing reputation" : "New farmer"}
+              {trust >= 80 ? t("trustedFarmer") : trust >= 40 ? t("growingReputation") : t("newFarmerLabel")}
             </div>
           </div>
         </div>
@@ -243,9 +243,9 @@ function HomeTab({
         {/* Listings */}
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-base font-bold">Your Active Listings</h2>
+            <h2 className="text-base font-bold">{t("yourActiveListings")}</h2>
             <button onClick={onOpenSell} className="text-xs font-semibold text-primary">
-              See all →
+              {t("seeAll")} →
             </button>
           </div>
           {active.length === 0 ? (
@@ -254,9 +254,9 @@ function HomeTab({
               className="w-full card-soft p-6 text-center border border-dashed border-primary/40"
             >
               <div className="text-4xl">🌱</div>
-              <div className="mt-2 text-sm font-semibold">No active listings</div>
+              <div className="mt-2 text-sm font-semibold">{t("noActiveListingsFarmer")}</div>
               <div className="text-xs text-muted-foreground mt-1">
-                Tap + Sell to create one!
+                {t("tapPlusCreate")}
               </div>
             </button>
           ) : (
@@ -284,9 +284,9 @@ function HomeTab({
         {/* Recent orders */}
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-base font-bold">Recent Orders</h2>
+            <h2 className="text-base font-bold">{t("recentOrders")}</h2>
             <button onClick={onOpenOrders} className="text-xs font-semibold text-primary">
-              See all →
+              {t("seeAll")} →
             </button>
           </div>
           {recent.length === 0 ? (
@@ -515,14 +515,14 @@ function SellTab({
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-xl font-extrabold">New Listing</h1>
+        <h1 className="text-xl font-extrabold">{t("newListing")}</h1>
       </div>
 
       <form onSubmit={submit} className="px-5 space-y-5">
         {/* Step 1: crop */}
         <div>
           <div className="text-xs font-bold text-muted-foreground uppercase mb-2">
-            1. Choose crop
+            1. {t("chooseCrop")}
           </div>
           <div className="grid grid-cols-3 gap-2">
             {CROP_OPTIONS.map((c) => {
@@ -553,7 +553,7 @@ function SellTab({
               }`}
             >
               <span className="text-2xl">➕</span>
-              <span className="text-[11px] font-semibold">Other</span>
+              <span className="text-[11px] font-semibold">{t("otherCrop")}</span>
             </button>
           </div>
           {crop === "__other" && (
@@ -591,7 +591,7 @@ function SellTab({
           </div>
           {range && (
             <div className="rounded-xl bg-primary-soft border border-primary/20 px-4 py-2.5 text-sm text-primary font-semibold mb-2">
-              Suggested: ₹{range[0]}–₹{range[1]}/kg
+              {t("suggestedPrice")}: ₹{range[0]}–₹{range[1]}/kg
             </div>
           )}
           <input
@@ -610,7 +610,7 @@ function SellTab({
         {/* Step 4: photos */}
         <div>
           <div className="text-xs font-bold text-muted-foreground uppercase mb-2">
-            4. Photos (optional)
+            4. {t("photosOptional")}
           </div>
           <label className="block card-soft border-2 border-dashed border-border p-4 text-center cursor-pointer">
             <input
@@ -621,7 +621,7 @@ function SellTab({
               onChange={onPhotoPick}
             />
             <div className="text-2xl">📸</div>
-            <div className="text-sm font-semibold mt-1">Add Photos</div>
+            <div className="text-sm font-semibold mt-1">{t("addPhotos")}</div>
           </label>
           {photos.length > 0 && (
             <div className="flex gap-2 mt-2 overflow-x-auto">
@@ -642,7 +642,7 @@ function SellTab({
           disabled={submitting || !finalCrop || !qty || !price}
           className="btn-primary w-full text-base"
         >
-          {submitting ? t("adding") : "Publish Listing"}
+          {submitting ? t("adding") : t("publishListing")}
         </button>
       </form>
     </>
