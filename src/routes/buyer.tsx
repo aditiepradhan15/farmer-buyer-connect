@@ -316,9 +316,9 @@ function BuyerDashboard({ buyer, onLogout }: { buyer: Buyer; onLogout: () => voi
         active={tab}
         onChange={(k) => setTab(k as typeof tab)}
         tabs={[
-          { key: "home", label: "Home", icon: <Home className="h-5 w-5" /> },
-          { key: "orders", label: "Orders", icon: <ClipboardList className="h-5 w-5" /> },
-          { key: "profile", label: "Profile", icon: <User className="h-5 w-5" /> },
+          { key: "home", label: t("homeTab"), icon: <Home className="h-5 w-5" /> },
+          { key: "orders", label: t("ordersTab"), icon: <ClipboardList className="h-5 w-5" /> },
+          { key: "profile", label: t("profileTab"), icon: <User className="h-5 w-5" /> },
         ]}
       />
     </PhoneFrame>
@@ -359,7 +359,7 @@ function HomeTab({
         right={
           <button
             onClick={onLogout}
-            aria-label="Logout"
+            aria-label={t("logout")}
             className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm"
           >
             <LogOut className="h-5 w-5" />
@@ -373,21 +373,21 @@ function HomeTab({
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search for crops, farmers..."
+            placeholder={t("searchPlaceholderCrops")}
             className="flex-1 bg-transparent outline-none text-sm py-1.5"
           />
         </div>
 
         {/* location */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-soft text-primary text-xs font-semibold">
-          <MapPin className="h-3.5 w-3.5" /> Nearby villages
+          <MapPin className="h-3.5 w-3.5" /> {t("nearbyVillages")}
         </div>
 
         {/* hero banner */}
         <div className="rounded-3xl p-5 text-white bg-gradient-to-br from-primary to-emerald-700 shadow-md">
-          <div className="text-lg font-extrabold">Fresh from the farm 🌾</div>
+          <div className="text-lg font-extrabold">{t("freshFromFarm")} 🌾</div>
           <div className="text-sm text-white/85 mt-1">
-            Direct from farmers near you.
+            {t("directFromFarmers")}
           </div>
         </div>
 
@@ -405,7 +405,7 @@ function HomeTab({
                     : "bg-card text-foreground border-border"
                 }`}
               >
-                {f}
+                {filterLabel(f, t)}
               </button>
             );
           })}
@@ -413,7 +413,7 @@ function HomeTab({
 
         {/* product grid */}
         <div>
-          <h2 className="text-base font-bold mb-2">All Fresh Listings</h2>
+          <h2 className="text-base font-bold mb-2">{t("allFreshListings")}</h2>
           {filtered.length === 0 ? (
             <div className="card-soft p-8 text-center">
               <div className="text-4xl">🥬</div>
@@ -430,7 +430,7 @@ function HomeTab({
                   </div>
                   <div className="mt-2 font-bold truncate">{l.crop_type}</div>
                   <div className="text-[11px] text-muted-foreground truncate">
-                    by {l.farmers?.name ?? "—"}
+                    {t("byLabel")} {l.farmers?.name ?? "—"}
                   </div>
                   <div className="mt-1 flex items-baseline justify-between">
                     <div className="text-primary font-extrabold">
@@ -458,7 +458,7 @@ function HomeTab({
                       disabled={busy === l.id}
                       className="flex-1 bg-primary text-primary-foreground rounded-lg text-xs font-bold py-1.5 disabled:opacity-60"
                     >
-                      {busy === l.id ? "..." : "Order"}
+                      {busy === l.id ? "..." : t("orderBtn")}
                     </button>
                   </div>
                 </div>
@@ -495,7 +495,7 @@ function OrdersTab({
   const { t } = useLang();
   return (
     <>
-      <TopBar title="My Orders" />
+      <TopBar title={t("myOrdersTitle")} />
       <div className="px-5 space-y-3">
         {myOrders.length === 0 ? (
           <div className="card-soft p-8 text-center">
@@ -606,7 +606,7 @@ function ProfileTab({
   const stars = Math.round((trust / 100) * 5);
   return (
     <>
-      <TopBar title="Profile" />
+      <TopBar title={t("profileTitle")} />
       <div className="px-5 space-y-4">
         <div className="card-soft p-6 text-center">
           <div className="mx-auto grid place-items-center h-20 w-20 rounded-full bg-primary-soft text-3xl font-extrabold text-primary">
@@ -633,11 +633,11 @@ function ProfileTab({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="card-soft p-4">
-            <div className="text-xs text-muted-foreground font-semibold">Total orders</div>
+            <div className="text-xs text-muted-foreground font-semibold">{t("totalOrdersLabel")}</div>
             <div className="mt-1 text-2xl font-extrabold">{orderCount}</div>
           </div>
           <div className="card-soft p-4">
-            <div className="text-xs text-muted-foreground font-semibold">Phone</div>
+            <div className="text-xs text-muted-foreground font-semibold">{t("phoneLabel")}</div>
             <div className="mt-1 text-sm font-bold truncate">{buyer.phone}</div>
           </div>
         </div>
