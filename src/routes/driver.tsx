@@ -198,9 +198,9 @@ function DriverDashboard({ driver, onLogout }: { driver: Driver; onLogout: () =>
         active={tab}
         onChange={(k) => setTab(k as typeof tab)}
         tabs={[
-          { key: "home", label: "Home", icon: <Home className="h-5 w-5" /> },
-          { key: "earnings", label: "Earnings", icon: <Wallet className="h-5 w-5" /> },
-          { key: "profile", label: "Profile", icon: <User className="h-5 w-5" /> },
+          { key: "home", label: t("homeTab"), icon: <Home className="h-5 w-5" /> },
+          { key: "earnings", label: t("earningsTab"), icon: <Wallet className="h-5 w-5" /> },
+          { key: "profile", label: t("profileTab"), icon: <User className="h-5 w-5" /> },
         ]}
       />
     </PhoneFrame>
@@ -234,7 +234,7 @@ function HomeTab({
         right={
           <button
             onClick={onLogout}
-            aria-label="Logout"
+            aria-label={t("logout")}
             className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm"
           >
             <LogOut className="h-5 w-5" />
@@ -244,7 +244,7 @@ function HomeTab({
       <div className="px-5 space-y-4">
         {/* welcome */}
         <div className="rounded-3xl p-5 text-white bg-gradient-to-br from-primary to-emerald-700 shadow-md">
-          <div className="text-lg font-bold">नमस्ते, {driver.name}! 🚚</div>
+          <div className="text-lg font-bold">{t("greeting")}, {driver.name}! 🚚</div>
           <div className="text-sm text-white/85 mt-1">
             {driver.vehicle_type} · {driver.vehicle_reg_number}
           </div>
@@ -284,7 +284,7 @@ function HomeTab({
                       </div>
                       <div className="text-right shrink-0">
                         <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                          Earn
+                          {t("earnLabel")}
                         </div>
                         <div className="text-primary font-extrabold">₹{fee}</div>
                       </div>
@@ -375,22 +375,22 @@ function EarningsTab({
   const delivered = mine.filter((o) => o.status === "delivered");
   return (
     <>
-      <TopBar title="Earnings" />
+      <TopBar title={t("earningsTitle")} />
       <div className="px-5 space-y-4">
         <div className="rounded-3xl p-6 text-white bg-gradient-to-br from-primary to-emerald-700 shadow-md text-center">
           <div className="text-xs font-semibold text-white/80 uppercase">
-            Total earned
+            {t("totalEarned")}
           </div>
           <div className="mt-1 text-4xl font-extrabold">₹{totalEarnings}</div>
           <div className="mt-1 text-sm text-white/85">
-            {delivered.length} deliveries completed
+            {delivered.length} {t("deliveriesCompleted")}
           </div>
         </div>
 
-        <h2 className="text-base font-bold">Delivery history</h2>
+        <h2 className="text-base font-bold">{t("deliveryHistory")}</h2>
         {delivered.length === 0 ? (
           <div className="card-soft p-6 text-center text-sm text-muted-foreground">
-            No completed deliveries yet.
+            {t("noCompletedDeliveries")}
           </div>
         ) : (
           <div className="space-y-2">
@@ -430,7 +430,7 @@ function ProfileTab({
   const stars = Math.round((trust / 100) * 5);
   return (
     <>
-      <TopBar title="Profile" />
+      <TopBar title={t("profileTitle")} />
       <div className="px-5 space-y-4">
         <div className="card-soft p-6 text-center">
           <div className="mx-auto grid place-items-center h-20 w-20 rounded-full bg-primary-soft text-3xl font-extrabold text-primary">
@@ -457,15 +457,15 @@ function ProfileTab({
 
         <div className="card-soft p-4 space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Phone</span>
+            <span className="text-muted-foreground">{t("phoneLabel")}</span>
             <span className="font-semibold">{driver.phone}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Vehicle</span>
+            <span className="text-muted-foreground">{t("vehicleLabel")}</span>
             <span className="font-semibold">{driver.vehicle_type}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Reg. Number</span>
+            <span className="text-muted-foreground">{t("regNumberLabel")}</span>
             <span className="font-semibold">{driver.vehicle_reg_number}</span>
           </div>
         </div>
