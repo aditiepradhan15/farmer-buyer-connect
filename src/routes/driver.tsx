@@ -372,6 +372,7 @@ function EarningsTab({
   mine: PickupOrder[];
   totalEarnings: number;
 }) {
+  const { t } = useLang();
   const delivered = mine.filter((o) => o.status === "delivered");
   return (
     <>
