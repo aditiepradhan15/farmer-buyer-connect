@@ -179,7 +179,7 @@ const translations: Record<Lang, Dict> = {
     noDriver: "इस फ़ोन नंबर से कोई ड्राइवर नहीं मिला।",
     welcome: "स्वागत है",
     logout: "बाहर जाओ",
-    trustScore: "विश्वास अंक",
+    trustScore: "भरोसा",
     createListing: "नई लिस्टिंग बनाएँ",
     cropType: "फसल का प्रकार",
     quantityKg: "मात्रा (किग्रा)",
