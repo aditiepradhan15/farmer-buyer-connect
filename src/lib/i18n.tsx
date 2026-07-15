@@ -348,7 +348,7 @@ const translations: Record<Lang, Dict> = {
     total: "एकूण",
     status: "स्थिती",
     acceptOrder: "ऑर्डर घ्या",
-    declineOrder: "ऑर्डर नाकारा",
+    declineOrder: "नको",
     markDelivered: "दिले",
     marketplace: "बाजारपेठ",
     noActiveListings: "कोणतीही सक्रिय लिस्टिंग नाही.",
