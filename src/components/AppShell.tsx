@@ -102,6 +102,7 @@ export function BottomNav({
 
 /** Colored status pill shared across roles. */
 export function StatusPill({ status }: { status: string }) {
+  const { t } = useLang();
   const map: Record<string, string> = {
     placed: "bg-yellow-100 text-yellow-900",
     confirmed: "bg-blue-100 text-blue-900",
@@ -111,13 +112,22 @@ export function StatusPill({ status }: { status: string }) {
     resolved_farmer: "bg-green-100 text-green-900",
     resolved_buyer: "bg-green-100 text-green-900",
   };
+  const labelMap: Record<string, string> = {
+    placed: t("statusPlaced"),
+    confirmed: t("statusConfirmed"),
+    delivered: t("statusDelivered"),
+    cancelled: t("statusCancelled"),
+    disputed: t("statusDisputed"),
+    resolved_farmer: t("statusResolvedFarmer"),
+    resolved_buyer: t("statusResolvedBuyer"),
+  };
   return (
     <span
       className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full ${
         map[status] ?? "bg-secondary text-secondary-foreground"
       }`}
     >
-      {status.replace("_", " ")}
+      {labelMap[status] ?? status.replace("_", " ")}
     </span>
   );
 }
