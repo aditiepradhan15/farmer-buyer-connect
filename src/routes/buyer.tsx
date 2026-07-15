@@ -126,6 +126,17 @@ type BuyerOrder = Order & {
 
 const FILTERS = ["All", "Vegetables", "Fruits", "Grains", "Leafy"] as const;
 
+function filterLabel(f: (typeof FILTERS)[number], t: (k: never) => string): string {
+  const map: Record<string, string> = {
+    All: "filterAll",
+    Vegetables: "filterVegetables",
+    Fruits: "filterFruits",
+    Grains: "filterGrains",
+    Leafy: "filterLeafy",
+  };
+  return t((map[f] ?? "filterAll") as never);
+}
+
 function categoryOf(crop: string): (typeof FILTERS)[number] {
   const c = (crop || "").toLowerCase();
   if (/(leaf|spinach|methi|coriander)/.test(c)) return "Leafy";
