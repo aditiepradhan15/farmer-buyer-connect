@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Bell, Leaf } from "lucide-react";
+import { useLang } from "@/lib/i18n";
 
 /** Mobile phone-frame wrapper used by every screen. */
 export function PhoneFrame({ children }: { children: ReactNode }) {
