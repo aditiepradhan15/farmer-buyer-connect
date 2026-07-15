@@ -35,7 +35,7 @@ export function TopBar({
         {right ?? (
           <button
             type="button"
-            aria-label="Notifications"
+            aria-label={t("notificationsLabel")}
             className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm"
           >
             <Bell className="h-5 w-5 text-foreground" />
