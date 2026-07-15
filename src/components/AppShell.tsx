@@ -20,6 +20,7 @@ export function TopBar({
   right?: ReactNode;
   title?: string;
 }) {
+  const { t } = useLang();
   return (
     <div className="flex items-center justify-between px-5 pt-5 pb-3">
       <Link to="/" className="flex items-center gap-2 text-primary">
