@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Bell, Leaf } from "lucide-react";
+import { useLang } from "@/lib/i18n";
 
 /** Mobile phone-frame wrapper used by every screen. */
 export function PhoneFrame({ children }: { children: ReactNode }) {
@@ -19,6 +20,7 @@ export function TopBar({
   right?: ReactNode;
   title?: string;
 }) {
+  const { t } = useLang();
   return (
     <div className="flex items-center justify-between px-5 pt-5 pb-3">
       <Link to="/" className="flex items-center gap-2 text-primary">
@@ -33,7 +35,7 @@ export function TopBar({
         {right ?? (
           <button
             type="button"
-            aria-label="Notifications"
+            aria-label={t("notificationsLabel")}
             className="grid place-items-center h-10 w-10 rounded-full bg-card shadow-sm"
           >
             <Bell className="h-5 w-5 text-foreground" />
@@ -100,6 +102,7 @@ export function BottomNav({
 
 /** Colored status pill shared across roles. */
 export function StatusPill({ status }: { status: string }) {
+  const { t } = useLang();
   const map: Record<string, string> = {
     placed: "bg-yellow-100 text-yellow-900",
     confirmed: "bg-blue-100 text-blue-900",
@@ -109,13 +112,22 @@ export function StatusPill({ status }: { status: string }) {
     resolved_farmer: "bg-green-100 text-green-900",
     resolved_buyer: "bg-green-100 text-green-900",
   };
+  const labelMap: Record<string, string> = {
+    placed: t("statusPlaced"),
+    confirmed: t("statusConfirmed"),
+    delivered: t("statusDelivered"),
+    cancelled: t("statusCancelled"),
+    disputed: t("statusDisputed"),
+    resolved_farmer: t("statusResolvedFarmer"),
+    resolved_buyer: t("statusResolvedBuyer"),
+  };
   return (
     <span
       className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full ${
         map[status] ?? "bg-secondary text-secondary-foreground"
       }`}
     >
-      {status.replace("_", " ")}
+      {labelMap[status] ?? status.replace("_", " ")}
     </span>
   );
 }
@@ -178,13 +190,7 @@ export function TrustRing({ score, size = 84 }: { score: number; size?: number }
 }
 
 /** Horizontal 5-step order tracker. */
-const STEPS = [
-  { key: "placed", label: "Placed", icon: "🟡" },
-  { key: "confirmed", label: "Confirmed", icon: "🔵" },
-  { key: "driver", label: "Driver", icon: "🚚" },
-  { key: "transit", label: "In transit", icon: "📦" },
-  { key: "delivered", label: "Delivered", icon: "✅" },
-] as const;
+const STEP_KEYS = ["placed", "confirmed", "driver", "transit", "delivered"] as const;
 
 export function OrderTracker({
   status,
@@ -195,6 +201,14 @@ export function OrderTracker({
   hasDriver: boolean;
   hasOtp: boolean;
 }) {
+  const { t } = useLang();
+  const labels: Record<(typeof STEP_KEYS)[number], string> = {
+    placed: t("trackPlaced"),
+    confirmed: t("trackConfirmed"),
+    driver: t("trackDriver"),
+    transit: t("trackTransit"),
+    delivered: t("trackDelivered"),
+  };
   let stepIndex = 0;
   if (status === "placed") stepIndex = 0;
   else if (status === "confirmed" && !hasDriver) stepIndex = 1;
@@ -203,13 +217,14 @@ export function OrderTracker({
   else if (status === "delivered") stepIndex = 4;
   else if (status === "cancelled" || status === "disputed") stepIndex = -1;
 
+
   return (
     <div className="flex items-center gap-1 mt-3">
-      {STEPS.map((s, i) => {
+      {STEP_KEYS.map((key, i) => {
         const done = stepIndex >= i && stepIndex !== -1;
         const current = stepIndex === i;
         return (
-          <div key={s.key} className="flex-1 flex flex-col items-center">
+          <div key={key} className="flex-1 flex flex-col items-center">
             <div
               className={`h-1.5 w-full rounded-full ${
                 done ? "bg-primary" : "bg-border"
@@ -224,7 +239,7 @@ export function OrderTracker({
                     : "text-muted-foreground"
               }`}
             >
-              {s.label}
+              {labels[key]}
             </div>
           </div>
         );
