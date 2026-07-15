@@ -101,7 +101,7 @@ function BuyerRegister({
         onChange={(e) => setBusinessType(e.target.value)}
         className="input-app"
       >
-        <option value="household">{t("businessHousehold")}</option>
+       
         <option value="restaurant">{t("businessRestaurant")}</option>
         <option value="hotel">{t("businessHotel")}</option>
         <option value="supermarket">{t("businessSupermarket")}</option>
