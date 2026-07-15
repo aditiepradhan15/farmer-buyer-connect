@@ -220,11 +220,11 @@ export function OrderTracker({
 
   return (
     <div className="flex items-center gap-1 mt-3">
-      {STEPS.map((s, i) => {
+      {STEP_KEYS.map((key, i) => {
         const done = stepIndex >= i && stepIndex !== -1;
         const current = stepIndex === i;
         return (
-          <div key={s.key} className="flex-1 flex flex-col items-center">
+          <div key={key} className="flex-1 flex flex-col items-center">
             <div
               className={`h-1.5 w-full rounded-full ${
                 done ? "bg-primary" : "bg-border"
@@ -239,7 +239,7 @@ export function OrderTracker({
                     : "text-muted-foreground"
               }`}
             >
-              {s.label}
+              {labels[key]}
             </div>
           </div>
         );
