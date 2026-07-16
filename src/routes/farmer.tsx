@@ -53,20 +53,22 @@ function FarmerRegister({
   onRegistered: (f: Farmer) => void;
 }) {
   const { t } = useLang();
-  const [name, setName] = useState("");
-  const [village, setVillage] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+const [name, setName] = useState("");
+const [village, setVillage] = useState("");
+const [city, setCity] = useState("");
+const [state, setState] = useState("");
+const [busy, setBusy] = useState(false);
+const [error, setError] = useState("");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const { data, error: insErr } = await supabase
-      .from("farmers")
-      .insert({ phone, name: name.trim(), village: village.trim() })
-      .select("*")
-      .maybeSingle();
+   const { data, error: insErr } = await supabase
+  .from("farmers")
+  .insert({ phone, name: name.trim(), village: village.trim(), city: city.trim(), state: state.trim() })
+  .select("*")
+  .maybeSingle();
     setBusy(false);
     if (insErr || !data) return setError(insErr?.message ?? "Failed to register");
     onRegistered(data as Farmer);
@@ -81,20 +83,34 @@ function FarmerRegister({
           {t("otpSentTo")}: <span className="font-semibold">{phone}</span>
         </p>
       </div>
-      <input
-        required
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder={t("yourName")}
-        className="input-app"
-      />
-      <input
-        required
-        value={village}
-        onChange={(e) => setVillage(e.target.value)}
-        placeholder={t("villageLabel")}
-        className="input-app"
-      />
+     <input
+  required
+  value={name}
+  onChange={(e) => setName(e.target.value)}
+  placeholder={t("yourName")}
+  className="input-app"
+/>
+<input
+  required
+  value={village}
+  onChange={(e) => setVillage(e.target.value)}
+  placeholder={t("villageLabel")}
+  className="input-app"
+/>
+<input
+  required
+  value={city}
+  onChange={(e) => setCity(e.target.value)}
+  placeholder="City (शहर)"
+  className="input-app"
+/>
+<input
+  required
+  value={state}
+  onChange={(e) => setState(e.target.value)}
+  placeholder="State (राज्य)"
+  className="input-app"
+/>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <button type="submit" disabled={busy} className="btn-primary w-full">
         {busy ? t("registering") : t("registerBtn")}
@@ -212,9 +228,9 @@ function HomeTab({
           <div className="text-lg font-bold">
             {t("greeting")}, {farmer.name}! 🌾
           </div>
-          <div className="text-sm text-white/85 mt-1">
-            📍 {farmer.village}
-          </div>
+         <div className="text-sm text-white/85 mt-1">
+  📍 {farmer.village}{farmer.city ? `, ${farmer.city}` : ''}{farmer.state ? `, ${farmer.state}` : ''}
+</div>
         </div>
 
         {/* Trust score */}
@@ -396,11 +412,14 @@ function OrderCard({ order, onChanged }: { order: OrderWithJoins; onChanged: () 
           <div className="text-xs text-muted-foreground mt-0.5 truncate">
             {t("buyer")}: {order.buyers?.name ?? "—"}
           </div>
-          {order.drivers && (
-            <div className="text-xs text-muted-foreground mt-0.5 truncate">
-              🚚 {order.drivers.name} · {order.drivers.vehicle_reg_number}
-            </div>
-          )}
+          {(order.status === "confirmed" || order.status === "in_transit") && (
+  
+    href="tel:7028574619"
+    className="mt-2 flex items-center gap-2 text-xs font-semibold text-primary"
+  >
+    📞 {t("callViaTollFree")} 7028574619
+  </a>
+)}
         </div>
       </div>
       {order.status === "placed" && (
