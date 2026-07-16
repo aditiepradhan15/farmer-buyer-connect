@@ -155,6 +155,9 @@ const translations: Record<Lang, Dict> = {
     step2: "2",
     step3: "3",
     step4: "4",
+    cityLabel: "City",
+stateLabel: "State",
+callViaTollFree: "Call via Toll-Free",
   },
   hi: {
     appName: "एग्रीकनेक्ट",
@@ -305,6 +308,9 @@ const translations: Record<Lang, Dict> = {
     step2: "२",
     step3: "३",
     step4: "४",
+    cityLabel: "शहर",
+stateLabel: "राज्य",
+callViaTollFree: "टोल-फ्री पर कॉल करें",
   },
   mr: {
     appName: "अ‍ॅग्रीकनेक्ट",
@@ -455,6 +461,9 @@ const translations: Record<Lang, Dict> = {
     step2: "२",
     step3: "३",
     step4: "४",
+    cityLabel: "शहर",
+stateLabel: "राज्य",
+callViaTollFree: "टोल-फ्री वर कॉल करा",
   },
 };
 
