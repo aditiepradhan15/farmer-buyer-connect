@@ -19,6 +19,7 @@ import {
   OrderTracker,
 } from "@/components/AppShell";
 import { Home, ClipboardList, User, Search, MapPin, LogOut, Star } from "lucide-react";
+import { PaymentSheet } from "@/components/PaymentSheet";
 
 export const Route = createFileRoute("/buyer")({
   head: () => ({ meta: [{ title: "Buyer — Mitti & Market" }] }),
@@ -157,6 +158,7 @@ function BuyerDashboard({ buyer, onLogout }: { buyer: Buyer; onLogout: () => voi
   const [otpMsg, setOtpMsg] = useState<Record<string, { kind: "error" | "info"; text: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [qtys, setQtys] = useState<Record<string, string>>({});
+  const [paymentTarget, setPaymentTarget] = useState<{ listing: ListingWithFarmer; qty: number } | null>(null);
 
   async function refresh() {
     const orderCols = `${BUYER_ORDER_COLUMNS}, listings(crop_type), farmers(name), drivers(name, vehicle_reg_number)`;
@@ -266,31 +268,50 @@ function BuyerDashboard({ buyer, onLogout }: { buyer: Buyer; onLogout: () => voi
     refresh();
   }
 
-  async function placeOrder(l: ListingWithFarmer) {
+  function placeOrder(l: ListingWithFarmer) {
     const q = Number(qtys[l.id] || 0);
     if (!q || q <= 0) return alert("Enter a quantity");
     if (q > l.quantity_kg) return alert(`Max available: ${l.quantity_kg} kg`);
+    // Instead of inserting the order immediately, open the demo payment sheet.
+    // The actual DB write happens in finalizeOrderAfterPayment once "payment" succeeds.
+    setPaymentTarget({ listing: l, qty: q });
+  }
+
+  async function finalizeOrderAfterPayment(payment: {
+    method: "card" | "upi" | "cod";
+    paymentId: string;
+    totalWithFee: number;
+  }): Promise<boolean> {
+    if (!paymentTarget) return false;
+    const { listing: l, qty: q } = paymentTarget;
     setBusy(l.id);
-    const total = q * l.price_per_kg;
     const { error: oErr } = await supabase.from("orders").insert({
       buyer_id: buyer.id,
       farmer_id: l.farmer_id,
       listing_id: l.id,
       quantity_kg: q,
-      total_price: total,
+      total_price: payment.totalWithFee,
       status: "placed",
+      payment_status: "paid",
+      payment_id: payment.paymentId,
+      payment_method: payment.method,
     });
     if (oErr) {
       setBusy(null);
-      return alert(oErr.message);
+      alert(oErr.message);
+      return false;
     }
     const { error: uErr } = await supabase
       .from("listings")
       .update({ status: "sold" })
       .eq("id", l.id);
     setBusy(null);
-    if (uErr) return alert(uErr.message);
+    if (uErr) {
+      alert(uErr.message);
+      return false;
+    }
     refresh();
+    return true;
   }
 
   return (
@@ -329,6 +350,20 @@ function BuyerDashboard({ buyer, onLogout }: { buyer: Buyer; onLogout: () => voi
           { key: "profile", label: t("profileTab"), icon: <User className="h-5 w-5" /> },
         ]}
       />
+
+      {paymentTarget && (
+        <PaymentSheet
+          cropType={paymentTarget.listing.crop_type}
+          quantityKg={paymentTarget.qty}
+          pricePerKg={paymentTarget.listing.price_per_kg}
+          onCancel={() => setPaymentTarget(null)}
+          onConfirm={finalizeOrderAfterPayment}
+          onViewOrder={() => {
+            setPaymentTarget(null);
+            setTab("orders");
+          }}
+        />
+      )}
     </PhoneFrame>
   );
 }
