@@ -413,7 +413,7 @@ function OrderCard({ order, onChanged }: { order: OrderWithJoins; onChanged: () 
             {t("buyer")}: {order.buyers?.name ?? "—"}
           </div>
           {(order.status === "confirmed" || order.status === "in_transit") && (
-  
+  <a
     href="tel:7028574619"
     className="mt-2 flex items-center gap-2 text-xs font-semibold text-primary"
   >
