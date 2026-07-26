@@ -281,6 +281,9 @@ function BuyerDashboard({ buyer, onLogout }: { buyer: Buyer; onLogout: () => voi
     method: "card" | "upi" | "cod";
     paymentId: string;
     totalWithFee: number;
+    advancePaid: number;
+    remainingAmount: number;
+    methodDetail: string;
   }): Promise<boolean> {
     if (!paymentTarget) return false;
     const { listing: l, qty: q } = paymentTarget;
@@ -290,11 +293,15 @@ function BuyerDashboard({ buyer, onLogout }: { buyer: Buyer; onLogout: () => voi
       farmer_id: l.farmer_id,
       listing_id: l.id,
       quantity_kg: q,
-      total_price: payment.totalWithFee,
+      // total_price is a numeric column (see migration note) — round to avoid
+      // float noise like 21.400000000000002, but this now accepts decimals.
+      total_price: Math.round(payment.totalWithFee * 100) / 100,
       status: "placed",
-      payment_status: "paid",
+      payment_status: payment.method === "cod" ? "partial" : "paid",
       payment_id: payment.paymentId,
       payment_method: payment.method,
+      advance_paid: Math.round(payment.advancePaid * 100) / 100,
+      remaining_amount: Math.round(payment.remainingAmount * 100) / 100,
     });
     if (oErr) {
       setBusy(null);
