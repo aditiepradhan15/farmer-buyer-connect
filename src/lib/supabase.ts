@@ -25,6 +25,8 @@ export type Farmer = {
   phone: string;
   name: string;
   village: string;
+  city?: string | null;
+  state?: string | null;
   trust_score: number;
 };
 
@@ -33,6 +35,8 @@ export type Buyer = {
   phone: string;
   name: string;
   business_type: string;
+  city?: string | null;
+  state?: string | null;
   trust_score: number;
 };
 
