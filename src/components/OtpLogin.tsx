@@ -24,17 +24,40 @@ export function OtpLogin({ title, onVerified, renderRegister }: Props) {
 
   const code = digits.join("");
 
+  async function readFnError(fnError: unknown, fallback: string): Promise<string> {
+    // Supabase FunctionsHttpError hides the real cause in the response body.
+    const res = (fnError as { context?: Response } | null)?.context;
+    if (res && typeof res.text === "function") {
+      try {
+        const body = await res.clone().text();
+        if (body) {
+          try {
+            const j = JSON.parse(body) as { error?: string; message?: string };
+            return j.error || j.message || body;
+          } catch {
+            return body;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return (fnError as { message?: string } | null)?.message || fallback;
+  }
+
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
     const normalized = normalizePhone(phone);
     setPhone(normalized);
-    const { error: fnError } = await supabase.functions.invoke("send-otp", {
+    const { data, error: fnError } = await supabase.functions.invoke("send-otp", {
       body: { phone: normalized },
     });
     setLoading(false);
-    if (fnError) return setError(fnError.message || t("otpSendFailed"));
+    if (fnError) return setError(await readFnError(fnError, t("otpSendFailed")));
+    const errText = (data as { error?: string } | null)?.error;
+    if (errText) return setError(errText);
     setDigits(["", "", "", "", "", ""]);
     setStep("otp");
     setTimeout(() => refs.current[0]?.focus(), 50);
@@ -50,7 +73,7 @@ export function OtpLogin({ title, onVerified, renderRegister }: Props) {
     });
     if (fnError || !data || (data as { verified?: boolean }).verified === false) {
       setLoading(false);
-      return setError(t("incorrectCode"));
+      return setError(fnError ? await readFnError(fnError, t("incorrectCode")) : t("incorrectCode"));
     }
     const result = await onVerified(normalized);
     setLoading(false);
@@ -62,6 +85,7 @@ export function OtpLogin({ title, onVerified, renderRegister }: Props) {
     }
     setError(result);
   }
+
 
   function setDigit(i: number, v: string) {
     const clean = v.replace(/\D/g, "").slice(-1);
